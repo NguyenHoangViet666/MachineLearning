@@ -1,0 +1,16 @@
+# Core Machine Learning & Data Science
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Visualization & Reporting
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Web Application & API
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+jinja2>=3.1.0
+requests>=2.31.0
