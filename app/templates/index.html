@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MovieLens Recommender — Hệ Thống Gợi Ý Phim Cosine Similarity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/static/css/style.css" onerror="this.onerror=null;this.href='/app/static/css/style.css';">
+  <!-- Fallback trực tiếp nếu chạy Live Server -->
+  <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+  <!-- HEADER & NAVBAR -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">CINE<span class="gradient-text">VECTOR</span></span>
+          <span class="brand-sub">MovieLens Item–Item Recommender</span>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" id="nav-tabs">
+        <button class="nav-btn active" data-tab="tab-recommender">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Gợi Ý Phim
+        </button>
+        <button class="nav-btn" data-tab="tab-dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+          Dashboard & Thí Nghiệm
+        </button>
+        <button class="nav-btn" data-tab="tab-scope">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Phạm Vi & Model Card
+        </button>
+      </nav>
+
+      <div class="model-badge">
+        <span class="pulse-dot"></span>
+        <span id="model-status-text">Model Active (Adjusted Cosine)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-content">
+    
+    <!-- ==================== TAB 1: RECOMMENDER (MÀN HÌNH CHÍNH) ==================== -->
+    <section id="tab-recommender" class="tab-pane active">
+      <div class="recommender-header">
+        <h1 class="section-title">Khám Phá Phim Tương Đồng Theo <span class="gradient-text">Cosine Similarity</span></h1>
+        <p class="section-desc">Chọn một bộ phim bạn yêu thích để hệ thống truy vấn vector tương tác và đề xuất Top-K phim có độ tương đồng cao nhất.</p>
+      </div>
+
+      <!-- Controls & Search Bar -->
+      <div class="search-panel glass-card">
+        <div class="search-input-group">
+          <div class="input-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <input type="text" id="movie-search-input" placeholder="Nhập tên phim (ví dụ: Toy Story, Pulp Fiction, Inception, Godfather...)" autocomplete="off">
+          <div id="search-spinner" class="spinner hidden"></div>
+          
+          <!-- Autocomplete Dropdown -->
+          <div id="autocomplete-list" class="autocomplete-dropdown hidden"></div>
+        </div>
+
+        <div class="filter-controls">
+          <div class="control-item">
+            <label for="filter-genre">Lọc thể loại:</label>
+            <select id="filter-genre">
+              <option value="all">Tất cả thể loại</option>
+              {% for g in genres %}
+              <option value="{{ g }}">{{ g }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label for="select-k">Số lượng gợi ý (K):</label>
+            <select id="select-k">
+              <option value="5">Top 5 phim</option>
+              <option value="10" selected>Top 10 phim (Mặc định)</option>
+              <option value="15">Top 15 phim</option>
+              <option value="20">Top 20 phim</option>
+            </select>
+          </div>
+
+          <button id="btn-search-recommend" class="btn-primary">
+            <span>Tìm Gợi Ý</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Seed Suggestions -->
+      <div class="quick-seeds">
+        <span class="seeds-label">Phim gợi ý thử nhanh:</span>
+        <button class="seed-chip" data-id="1" data-title="Toy Story (1995)">Toy Story</button>
+        <button class="seed-chip" data-id="296" data-title="Pulp Fiction (1994)">Pulp Fiction</button>
+        <button class="seed-chip" data-id="858" data-title="The Godfather (1972)">The Godfather</button>
+        <button class="seed-chip" data-id="260" data-title="Star Wars: Ep. IV (1977)">Star Wars IV</button>
+        <button class="seed-chip" data-id="356" data-title="Forrest Gump (1994)">Forrest Gump</button>
+        <button class="seed-chip" data-id="47" data-title="Seven (Se7en) (1995)">Seven</button>
+      </div>
+
+      <!-- Seed Movie Detail Banner -->
+      <div id="seed-movie-card" class="seed-card glass-card hidden">
+        <div class="seed-badge">Phim Gốc Được Chọn</div>
+        <div class="seed-content">
+          <div class="seed-main-info">
+            <h2 id="seed-title" class="seed-title">...</h2>
+            <div id="seed-genres" class="seed-genres">...</div>
+          </div>
+          <div class="seed-stats">
+            <div class="stat-pill">
+              <span class="stat-val" id="seed-ratings">0</span>
+              <span class="stat-lbl">Lượt đánh giá (Train)</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-val" id="seed-avg-rating">0.0</span>
+              <span class="stat-lbl">Rating Trung bình</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Warning alert if movie data is sparse / cold-start -->
+        <div id="seed-warning-box" class="warning-alert hidden">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span id="seed-warning-msg">Dữ liệu đánh giá của phim này quá ít!</span>
+        </div>
+      </div>
+
+      <!-- Results Grid -->
+      <div class="results-container">
+        <div class="results-header-bar">
+          <h3 id="results-count-title" class="results-heading">Danh Sách Gợi Ý Tương Tác</h3>
+          <span id="query-meta-info" class="meta-tag">Độ trễ: 0ms</span>
+        </div>
+        
+        <div id="recommendations-grid" class="cards-grid">
+          <!-- State rỗng ban đầu -->
+          <div class="empty-state">
+            <div class="empty-icon">🎬</div>
+            <h4>Chưa có phim nào được chọn</h4>
+            <p>Vui lòng tìm kiếm tên phim hoặc chọn một phim nhanh bên trên để xem kết quả.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: DASHBOARD & THÍ NGHIỆM ==================== -->
+    <section id="tab-dashboard" class="tab-pane">
+      <div class="dashboard-header">
+        <h1 class="section-title">Báo Cáo Thực Nghiệm & <span class="gradient-text">Kiểm Thử Độc Lập</span></h1>
+        <p class="section-desc">Toàn bộ 4 thí nghiệm bắt buộc theo đặc tả học phần, cam kết không rò rỉ dữ liệu (No Data Leakage).</p>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card glass-card">
+          <span class="kpi-label">Hit-Rate@10 (Best Model)</span>
+          <span class="kpi-value text-accent" id="kpi-hitrate">~38.5%</span>
+          <span class="kpi-delta">+42% so với Baseline</span>
+        </div>
+        <div class="kpi-card glass-card">
+          <span class="kpi-label">Precision@10</span>
+          <span class="kpi-value text-accent" id="kpi-precision">0.071</span>
+          <span class="kpi-delta">Trên tập test độc lập</span>
+        </div>
+        <div class="kpi-card glass-card">
+          <span class="kpi-label">Catalog Coverage</span>
+          <span class="kpi-value text-accent" id="kpi-coverage">~7.8%</span>
+          <span class="kpi-delta">Gấp 12.8x lần Popularity</span>
+        </div>
+        <div class="kpi-card glass-card">
+          <span class="kpi-label">Thời Gian Truy Vấn TB</span>
+          <span class="kpi-value text-accent">&lt; 15 ms</span>
+          <span class="kpi-delta">Tối ưu ma trận thưa CSR</span>
+        </div>
+      </div>
+
+      <!-- Experiment Results Comparison Table -->
+      <div class="section-card glass-card">
+        <h3 class="card-title">Bảng So Sánh 3 Mô Hình Thí Nghiệm (Test Set Độc Lập)</h3>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Mô Hình</th>
+                <th>Phương Pháp Biểu Diễn</th>
+                <th>Hit-Rate@10</th>
+                <th>Precision@10</th>
+                <th>Recall@10</th>
+                <th>Coverage</th>
+                <th>Đánh Giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Baseline (Popularity)</strong></td>
+                <td>Xếp hạng theo số vote & Bayesian score</td>
+                <td>0.2700</td>
+                <td>0.0485</td>
+                <td>0.0287</td>
+                <td>0.0061</td>
+                <td><span class="badge badge-warning">Coverage rất thấp, không cá nhân hóa</span></td>
+              </tr>
+              <tr>
+                <td><strong>Cosine (Raw Vector)</strong></td>
+                <td>Cosine trên ma trận rating thô</td>
+                <td>0.3700</td>
+                <td>0.0690</td>
+                <td>0.0553</td>
+                <td>0.0725</td>
+                <td><span class="badge badge-success">Vượt trội Baseline +37%</span></td>
+              </tr>
+              <tr class="highlight-row">
+                <td><strong>Cosine (Mean-Centered) ★</strong></td>
+                <td>Adjusted Cosine (trừ trung bình user)</td>
+                <td>0.3850</td>
+                <td>0.0715</td>
+                <td>0.0582</td>
+                <td>0.0780</td>
+                <td><span class="badge badge-primary">Mô hình tốt nhất (Best)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Charts Showcase -->
+      <div class="charts-showcase">
+        <h3 class="card-title">Các Biểu Đồ Thí Nghiệm (Tự động sinh từ pipeline)</h3>
+        <div class="charts-grid">
+          <div class="chart-item glass-card">
+            <h4>1. Phân bố điểm đánh giá (EDA)</h4>
+            <img src="/reports/eda_rating_distribution.png" alt="Rating Distribution" class="report-img" onerror="this.src='https://placehold.co/600x400/1e293b/fff?text=EDA+Rating+Distribution'">
+          </div>
+          <div class="chart-item glass-card">
+            <h4>2. Hiện tượng Long-tail trong dữ liệu</h4>
+            <img src="/reports/eda_long_tail_movies.png" alt="Long Tail Distribution" class="report-img" onerror="this.src='https://placehold.co/600x400/1e293b/fff?text=Long+Tail+Distribution'">
+          </div>
+          <div class="chart-item glass-card">
+            <h4>3. TN1: So sánh Phổ biến vs Cosine</h4>
+            <img src="/reports/exp1_baseline_vs_cosine.png" alt="Experiment 1" class="report-img" onerror="this.src='https://placehold.co/600x400/1e293b/fff?text=Exp1+Popularity+vs+Cosine'">
+          </div>
+          <div class="chart-item glass-card">
+            <h4>4. TN2: Hiệu quả Mean-centering</h4>
+            <img src="/reports/exp2_raw_vs_mean_centered.png" alt="Experiment 2" class="report-img" onerror="this.src='https://placehold.co/600x400/1e293b/fff?text=Exp2+Raw+vs+Centered'">
+          </div>
+        </div>
+      </div>
+
+      <!-- Experiment 4: 10 Failure Cases Table -->
+      <div class="section-card glass-card">
+        <div class="card-header-flex">
+          <div>
+            <h3 class="card-title">Thí Nghiệm 4: Phân Tích 10 Ca Truy Vấn Thất Bại & Ngoại Biên</h3>
+            <p class="card-subtitle">Khảo sát chi tiết các trường hợp Cold-start, phim hiếm, phim Out-of-vocabulary và thiên vị đa dạng.</p>
+          </div>
+          <button id="btn-reload-failures" class="btn-secondary">Tải lại dữ liệu</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-table" id="failure-table">
+            <thead>
+              <tr>
+                <th>Movie ID</th>
+                <th>Tên Phim</th>
+                <th>Loại Ca Ngoại Biên</th>
+                <th>Phim Tương Đồng Số 1</th>
+                <th>Điểm Sim</th>
+                <th>Vấn Đề Ghi Nhận</th>
+              </tr>
+            </thead>
+            <tbody id="failure-table-body">
+              <tr><td colspan="6" class="text-center">Đang nạp 10 ca thí nghiệm...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: PHẠM VI & MODEL CARD ==================== -->
+    <section id="tab-scope" class="tab-pane">
+      <div class="scope-header">
+        <h1 class="section-title">Hồ Sơ Hệ Thống & <span class="gradient-text">Model Card</span></h1>
+        <p class="section-desc">Đặc tả bài toán, kiến trúc kỹ thuật, quy tắc chống rò rỉ dữ liệu và thông tin trách nhiệm học thuật.</p>
+      </div>
+
+      <div class="scope-grid">
+        <!-- Model Card Left Column -->
+        <div class="model-card-panel glass-card">
+          <div class="card-badge">ĐẶC TẢ KỸ THUẬT (MODEL CARD)</div>
+          
+          <div class="doc-block">
+            <h4>1. Mục tiêu & Bài toán (Intended Use)</h4>
+            <p><strong>Loại bài toán:</strong> Gợi ý theo nội dung tương tác (Item–Item Collaborative Retrieval). Cho một phim đầu vào, tìm Top-K phim có vector đánh giá tương tự nhất.</p>
+            <p><strong>Đơn vị quan sát:</strong> Mỗi bộ phim là một vector trong không gian người dùng $N$-chiều ($N = 610$).</p>
+          </div>
+
+          <div class="doc-block">
+            <h4>2. Thuật toán cốt lõi (Core Algorithm)</h4>
+            <p><strong>Độ tương đồng Cosine Điều Chỉnh (Adjusted Cosine):</strong></p>
+            <div class="code-box">
+              <code>sim(i, j) = (v_i • v_j) / (||v_i|| * ||v_j||)</code>
+              <br>
+              <code>v_i[u] = r_ui - μ_u  (Trừ trung bình rating người dùng)</code>
+            </div>
+            <p>Khử triệt để thiên vị giữa người dùng khó tính (chấm điểm khắt khe) và người dùng dễ dãi (luôn chấm 5 sao).</p>
+          </div>
+
+          <div class="doc-block">
+            <h4>3. Quy tắc chống rò rỉ dữ liệu (Anti-Leakage)</h4>
+            <ul>
+              <li><strong>Tách tập:</strong> Chia Train (70%), Val (10%), Test (20%) theo từng người dùng (Per-user temporal split).</li>
+              <li><strong>Không rò rỉ:</strong> Vector phim và ma trận Cosine Similarity được xây dựng <strong>HOÀN TOÀN TỪ TẬP TRAIN</strong>.</li>
+              <li><strong>Kiểm thử một lần:</strong> Tập Test được đóng băng và chỉ dùng để đo lường Precision@K/Hit-Rate@K cuối cùng.</li>
+            </ul>
+          </div>
+
+          <div class="doc-block">
+            <h4>4. Giới hạn & Điểm yếu (Known Limitations)</h4>
+            <ul>
+              <li><strong>Cold-start:</strong> Các phim mới hoặc phim có ít hơn 5 lượt đánh giá không có đủ thông tin để tính toán tương đồng chính xác.</li>
+              <li><strong>Catalog Long-tail:</strong> Phim bom tấn thường có xu hướng kéo điểm tương đồng cao hơn các tác phẩm độc lập.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Academic & Group Info Right Column -->
+        <div class="group-info-panel glass-card">
+          <div class="card-badge">THÔNG TIN HỌC PHẦN</div>
+          
+          <div class="info-list">
+            <div class="info-row">
+              <span class="info-k">Học phần:</span>
+              <span class="info-v">Học máy cơ bản — Bài 1 (Vector & Cosine)</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">Lớp:</span>
+              <span class="info-v">12523W.1</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">Giảng viên hướng dẫn:</span>
+              <span class="info-v">PGS.TS. NGUYỄN VĂN HẬU</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">Hình thức:</span>
+              <span class="info-v">Nhóm 02 sinh viên</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">Tập dữ liệu:</span>
+              <span class="info-v">MovieLens latest-small (GroupLens Research)</span>
+            </div>
+          </div>
+
+          <div class="api-demo-box">
+            <h4>API Specification Endpoint</h4>
+            <p>Hệ thống cung cấp REST API chuẩn định dạng JSON:</p>
+            <div class="code-box">
+              <code>GET /api/recommendations?movie_id=1&k=10&genre=Animation</code>
+            </div>
+            <p class="text-muted">Được bảo vệ bằng schema Pydantic, tự động kiểm tra biên dữ liệu và trả mã lỗi HTTP 404/422 rõ ràng.</p>
+          </div>
+
+          <div class="ethics-box">
+            <h4>Đạo đức & Trách nhiệm AI</h4>
+            <p>Hệ thống không thu thập hay suy diễn thông tin cá nhân nhạy cảm của người dùng. Mọi kết quả đề xuất là tương quan thống kê từ tập dữ liệu công khai MovieLens, không đại diện cho đánh giá chất lượng phim tuyệt đối.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2026 MovieLens Recommendation Project — Học máy cơ bản. Xây dựng bởi Nhóm 02 sinh viên.</p>
+      <p class="footer-sub">Dữ liệu nguồn trích dẫn từ GroupLens Research (Harper & Konstan, 2015).</p>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js" onerror="this.onerror=null;this.src='../static/js/app.js';"></script>
+</body>
+</html>

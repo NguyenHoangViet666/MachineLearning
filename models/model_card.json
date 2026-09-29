@@ -1,0 +1,58 @@
+{
+  "model_name": "MovieLens Item-Item Cosine Recommender",
+  "version": "1.0.0",
+  "author": "Nhóm 02 sinh viên (Lớp 12523W.1)",
+  "intended_use": {
+    "primary_task": "Item-to-item movie recommendation based on user interaction vectors",
+    "intended_users": "Nền tảng xem phim, phục vụ người dùng tìm phim tương tự",
+    "out_of_scope": "Dự đoán điểm số chính xác (Rating regression), hồ sơ người dùng nhạy cảm"
+  },
+  "training_data": {
+    "dataset": "MovieLens latest-small (GroupLens)",
+    "num_ratings_train": 62671,
+    "num_movies_indexed": 2770,
+    "num_users_indexed": 610,
+    "sparsity": "96.29%"
+  },
+  "technical_specifications": {
+    "algorithm": "Adjusted Cosine Similarity (Item-Item Collaborative Filtering)",
+    "mean_centering": true,
+    "min_movie_ratings": 5,
+    "similarity_metric": "Cosine (Row-normalized dot product)"
+  },
+  "evaluation_summary": {
+    "exp1_vs_baseline": {
+      "popularity": {
+        "HitRate@10": 0.27,
+        "Precision@10": 0.0485,
+        "Recall@10": 0.0287,
+        "Coverage": 0.0061,
+        "AvgLatencyMs": 0.28,
+        "EvaluatedUsers": 200
+      },
+      "cosine_raw": {
+        "HitRate@10": 0.37,
+        "Precision@10": 0.069,
+        "Recall@10": 0.0553,
+        "Coverage": 0.0725,
+        "AvgLatencyMs": 86.88,
+        "EvaluatedUsers": 200
+      }
+    },
+    "exp2_mean_centering_gain": {
+      "HitRate@10": 0.235,
+      "Precision@10": 0.034,
+      "Recall@10": 0.0293,
+      "Coverage": 0.1096,
+      "AvgLatencyMs": 56.34,
+      "EvaluatedUsers": 200
+    },
+    "leakage_prevention": "Per-user temporal split, zero test interactions included in feature matrix"
+  },
+  "limitations": [
+    "Cold-start: Không thể gợi ý chính xác cho phim mới chưa có đánh giá hoặc ít hơn 5 đánh giá.",
+    "Long-tail bias: Phim ít người xem thường có ít tương đồng chất lượng so với phim phổ biến.",
+    "Sở thích tĩnh: Chưa tính đến sự thay đổi gu xem phim theo thời gian thực."
+  ],
+  "ethical_considerations": "Không suy diễn thông tin nhân khẩu học hay sở thích riêng tư. Minh bạch điểm tương đồng và lý do gợi ý."
+}

@@ -1,0 +1,142 @@
+[
+  {
+    "movieId": 1,
+    "title": "Toy Story (1995)",
+    "case_type": "Bom tấn",
+    "note": "Toy Story (1995) - Rất nhiều rating, kiểm tra xem có bị chiếm bởi các phim bom tấn khác không",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Toy Story 2 (1999)",
+    "top_1_score": 0.3301,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 260,
+    "title": "Star Wars: Episode IV - A New Hope (1977)",
+    "case_type": "Phim kinh điển",
+    "note": "Star Wars: Episode IV - A New Hope (1995) - Thử độ đa dạng thể loại Sci-Fi",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Star Wars: Episode V - The Empire Strikes Back (1980)",
+    "top_1_score": 0.6489,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 356,
+    "title": "Forrest Gump (1994)",
+    "case_type": "Phim đại chúng",
+    "note": "Forrest Gump (1994) - Kiểm tra độ tương đồng có thiên lệch sang phim drama/phổ biến",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Shawshank Redemption, The (1994)",
+    "top_1_score": 0.4062,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 8844,
+    "title": "Camera Buff (Amator) (1979)",
+    "case_type": "Ít tương tác",
+    "note": "Jumanji (phần tiếp theo hoặc phim ít rating)",
+    "status": "warning",
+    "warning": null,
+    "num_recommendations": 0,
+    "top_1_sim": "None",
+    "top_1_score": 0.0,
+    "identified_issues": [
+      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
+    ]
+  },
+  {
+    "movieId": 193581,
+    "title": "Black Butler: Book of the Atlantic (2017)",
+    "case_type": "Cold-start cực hạn",
+    "note": "Black Butler: Book of the Atlantic (2017) - Chỉ có 1 rating",
+    "status": "warning",
+    "warning": null,
+    "num_recommendations": 0,
+    "top_1_sim": "None",
+    "top_1_score": 0.0,
+    "identified_issues": [
+      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
+    ]
+  },
+  {
+    "movieId": 999999,
+    "title": "Unknown / Not found",
+    "case_type": "Out-of-vocabulary (OOV)",
+    "note": "Phim không hề tồn tại trong cơ sở dữ liệu",
+    "status": "warning",
+    "warning": null,
+    "num_recommendations": 0,
+    "top_1_sim": "None",
+    "top_1_score": 0.0,
+    "identified_issues": [
+      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
+    ]
+  },
+  {
+    "movieId": 47,
+    "title": "Seven (a.k.a. Se7en) (1995)",
+    "case_type": "Phim hình sự giật gân",
+    "note": "Seven (Se7en) (1995) - Kiểm tra xem gợi ý có giữ được đúng tone đen tối",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Pulp Fiction (1994)",
+    "top_1_score": 0.3456,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 296,
+    "title": "Pulp Fiction (1994)",
+    "case_type": "Tác phẩm độc đáo",
+    "note": "Pulp Fiction (1994) - Phim có sự pha trộn giữa Crime, Comedy",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Usual Suspects, The (1995)",
+    "top_1_score": 0.4164,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 117176,
+    "title": "The Theory of Everything (2014)",
+    "case_type": "Phim hoạt hình hiện đại",
+    "note": "Big Hero 6 (2014)",
+    "status": "success",
+    "warning": "Cảnh báo: Phim 'The Theory of Everything (2014)' có ít đánh giá (8 lượt), độ tin cậy của gợi ý có thể bị ảnh hưởng.",
+    "num_recommendations": 5,
+    "top_1_sim": "Pitch Perfect 2 (2015)",
+    "top_1_score": 0.4661,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  },
+  {
+    "movieId": 858,
+    "title": "Godfather, The (1972)",
+    "case_type": "Kinh điển Crime/Drama",
+    "note": "The Godfather (1972) - Kiểm tra phim tiếp nối có gợi ý The Godfather Part II không",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Godfather: Part II, The (1974)",
+    "top_1_score": 0.6731,
+    "identified_issues": [
+      "Gợi ý tốt, tương đồng cao."
+    ]
+  }
+]
