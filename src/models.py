@@ -131,11 +131,17 @@ class CosineItemItemRecommender:
         self, 
         movie_id: int, 
         top_k: int = 10, 
-        filter_genre: Optional[str] = None
+        filter_genre: Optional[str] = None,
+        filter_genres: Optional[List[str]] = None,
+        genre_match_mode: str = "any"
     ) -> Dict[str, Any]:
         """
         Gợi ý Top-K phim tương đồng với movie_id chỉ định.
         Kèm kiểm tra dữ liệu thưa / cảnh báo cold-start và giải thích lý do.
+        Hỗ trợ lọc nhiều thể loại theo 3 chế độ:
+        - 'any': Khớp ít nhất 1 thể loại (OR)
+        - 'all': Khớp đầy đủ tất cả thể loại (AND)
+        - 'exclude': Loại trừ phim chứa các thể loại này (NOT)
         """
         if movie_id not in self.builder.movie2idx:
             # Trường hợp phim không có trong train hoặc bị loại do quá ít rating (< min_ratings)
@@ -150,6 +156,25 @@ class CosineItemItemRecommender:
         item_idx = self.builder.movie2idx[movie_id]
         scores = self.similarity_matrix[item_idx]
         
+        # Chuẩn hóa danh sách thể loại cần lọc
+        active_genres: List[str] = []
+        if filter_genres:
+            for g in filter_genres:
+                if isinstance(g, str):
+                    for sub_g in g.split(","):
+                        sub_clean = sub_g.strip()
+                        if sub_clean and sub_clean.lower() != "all" and sub_clean not in active_genres:
+                            active_genres.append(sub_clean)
+        elif filter_genre and filter_genre.strip().lower() != "all":
+            for sub_g in filter_genre.split(","):
+                sub_clean = sub_g.strip()
+                if sub_clean and sub_clean.lower() != "all" and sub_clean not in active_genres:
+                    active_genres.append(sub_clean)
+
+        genre_match_mode = (genre_match_mode or "any").lower().strip()
+        if genre_match_mode not in ("any", "all", "exclude"):
+            genre_match_mode = "any"
+
         # Lấy các chỉ số có điểm cao nhất
         ranked_indices = np.argsort(scores)[::-1]
         
@@ -175,16 +200,43 @@ class CosineItemItemRecommender:
                 
             m_title = movie_meta["title"].values[0]
             m_genres = movie_meta["genres"].values[0]
-            m_genres_set = set(m_genres.split("|"))
+            m_genres_set = set(m_genres.split("|")) if isinstance(m_genres, str) else set()
+            m_genres_lower = {g.strip().lower() for g in m_genres_set}
             
-            # Nếu có bộ lọc thể loại
-            if filter_genre and filter_genre.lower() != "all":
-                if filter_genre.lower() not in [g.lower() for g in m_genres_set]:
-                    continue
+            # Lọc theo thể loại và chế độ (any / all / exclude)
+            if active_genres:
+                active_lower = [g.lower() for g in active_genres]
+                if genre_match_mode == "all":
+                    if not all(req in m_genres_lower for req in active_lower):
+                        continue
+                elif genre_match_mode == "exclude":
+                    if any(req in m_genres_lower for req in active_lower):
+                        continue
+                else:  # any
+                    if not any(req in m_genres_lower for req in active_lower):
+                        continue
 
-            # Lý do tương đồng
+            # Lý do tương đồng & thông tin khớp thể loại
             common_genres = query_genres.intersection(m_genres_set)
-            genre_reason = f"cùng thể loại ({', '.join(common_genres)})" if common_genres else "thể loại bổ trợ"
+            matched_filters = [g for g in active_genres if g.lower() in m_genres_lower] if active_genres else []
+            
+            if active_genres:
+                if genre_match_mode == "exclude":
+                    filter_info = f"đã loại trừ thể loại ({', '.join(active_genres)})"
+                elif genre_match_mode == "all":
+                    filter_info = f"đủ tất cả thể loại ({', '.join(matched_filters)})"
+                else:
+                    filter_info = f"khớp thể loại ({', '.join(matched_filters)})"
+
+                if common_genres:
+                    genre_reason = f"cùng thể loại ({', '.join(common_genres)}) và {filter_info}"
+                else:
+                    genre_reason = f"{filter_info}"
+            elif common_genres:
+                genre_reason = f"cùng thể loại ({', '.join(common_genres)})"
+            else:
+                genre_reason = "thể loại bổ trợ"
+
             reason = f"Được nhiều người dùng cùng yêu thích giống như '{query_title}', {genre_reason}."
 
             recommendations.append({
@@ -206,6 +258,10 @@ class CosineItemItemRecommender:
             "rating_count": query_rating_count,
             "status": "success",
             "warning": warning,
+            "k": top_k,
+            "filter_genre": active_genres[0] if len(active_genres) == 1 else (", ".join(active_genres) if active_genres else None),
+            "filter_genres": active_genres,
+            "genre_match_mode": genre_match_mode,
             "recommendations": recommendations
         }
 

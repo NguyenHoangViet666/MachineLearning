@@ -123,6 +123,8 @@ class RecommendationResponse(BaseModel):
     warning: Optional[str] = None
     k: int
     filter_genre: Optional[str] = None
+    filter_genres: Optional[List[str]] = None
+    genre_match_mode: Optional[str] = "any"
     recommendations: List[MovieRecommendationItem]
 
 
@@ -139,35 +141,113 @@ class ChatResponse(BaseModel):
     target_genre: Optional[str] = Field(default=None, description="Thể loại được trích xuất")
 
 
+def parse_genres_param(
+    genres: Optional[List[str]] = None, 
+    genre: Optional[str] = None
+) -> List[str]:
+    """Chuẩn hóa danh sách thể loại từ query parameters (danh sách hoặc chuỗi phân tách dấu phẩy)."""
+    result: List[str] = []
+    if genres:
+        for g in genres:
+            if isinstance(g, str):
+                for item in g.split(","):
+                    clean = item.strip()
+                    if clean and clean.lower() != "all" and clean not in result:
+                        result.append(clean)
+    if genre and genre.strip().lower() != "all":
+        for item in genre.split(","):
+            clean = item.strip()
+            if clean and clean.lower() != "all" and clean not in result:
+                result.append(clean)
+    return result
+
+
 # Endpoints
 @app.get("/", response_class=HTMLResponse)
 async def index_page(request: Request):
     """Trang chủ ứng dụng Web với 3 màn hình tương tác."""
+    from collections import Counter
+    counts = Counter()
+    if MOVIES_DF is not None:
+        for g_str in MOVIES_DF["genres"].dropna():
+            for g in g_str.split("|"):
+                g = g.strip()
+                if g and g != "(no genres listed)":
+                    counts[g] += 1
+    genre_items = [{"name": g, "count": counts.get(g, 0)} for g in GENRES_LIST]
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"genres": GENRES_LIST}
+        context={"genres": GENRES_LIST, "genre_items": genre_items}
     )
+
+
+@app.get("/api/genres")
+async def get_genres_list():
+    """Lấy danh sách thể loại kèm số lượng phim tương ứng."""
+    if MOVIES_DF is None:
+        raise HTTPException(status_code=503, detail="Dữ liệu phim chưa sẵn sàng.")
+    from collections import Counter
+    counts = Counter()
+    for g_str in MOVIES_DF["genres"].dropna():
+        for g in g_str.split("|"):
+            g = g.strip()
+            if g and g != "(no genres listed)":
+                counts[g] += 1
+    genre_data = [{"genre": g, "count": counts.get(g, 0)} for g in GENRES_LIST]
+    return {"genres": genre_data}
 
 
 @app.get("/api/movies")
 async def search_movies(
     query: Optional[str] = Query(None, description="Từ khóa tìm kiếm theo tên phim"),
-    genre: Optional[str] = Query(None, description="Lọc theo thể loại"),
-    limit: int = Query(20, ge=1, le=100)
+    genre: Optional[str] = Query(None, description="Lọc theo thể loại (chuỗi đơn hoặc phân tách bởi dấu phẩy)"),
+    genres: Optional[List[str]] = Query(None, description="Danh sách nhiều thể loại cần lọc"),
+    match_mode: str = Query("any", description="Chế độ kết hợp: 'any' (khớp 1 thể loại), 'all' (đủ tất cả), 'exclude' (loại trừ)"),
+    limit: int = Query(24, ge=1, le=100)
 ):
-    """Tìm kiếm phim hỗ trợ thanh tìm kiếm và autocomplete."""
+    """Tìm kiếm phim hỗ trợ thanh tìm kiếm, autocomplete và kết hợp lọc nhiều thể loại (ANY / ALL / EXCLUDE)."""
     if MOVIES_DF is None:
         raise HTTPException(status_code=503, detail="Dữ liệu phim chưa sẵn sàng.")
     
+    genres_list = parse_genres_param(genres=genres, genre=genre)
+    match_mode_clean = match_mode.lower() if match_mode in ("any", "all", "exclude") else "any"
+
     df = MOVIES_DF.copy()
     if query:
         df = df[df["title"].str.contains(query, case=False, na=False)]
-    if genre and genre.lower() != "all":
-        df = df[df["genres"].str.contains(genre, case=False, na=False)]
     
-    results = df.head(limit).to_dict(orient="records")
-    return {"total": len(results), "movies": results}
+    if genres_list:
+        genres_lower = [g.lower() for g in genres_list]
+        def match_genres(g_str):
+            if not isinstance(g_str, str):
+                return False
+            m_set = {x.strip().lower() for x in g_str.split("|")}
+            if match_mode_clean == "all":
+                return all(req in m_set for req in genres_lower)
+            elif match_mode_clean == "exclude":
+                return not any(req in m_set for req in genres_lower)
+            else:  # any
+                return any(req in m_set for req in genres_lower)
+        df = df[df["genres"].apply(match_genres)]
+    
+    records = df.head(limit).to_dict(orient="records")
+    for r in records:
+        m_id = r.get("movieId")
+        if MODEL and m_id in MODEL.movie_stats:
+            stats = MODEL.movie_stats[m_id]
+            r["rating_count"] = stats.get("rating_count", 0)
+            r["rating_mean"] = round(stats.get("rating_mean", 0.0), 2)
+        else:
+            r["rating_count"] = 0
+            r["rating_mean"] = 0.0
+
+    return {
+        "total": len(records), 
+        "movies": records,
+        "filter_genres": genres_list,
+        "match_mode": match_mode_clean
+    }
 
 
 @app.get("/api/movies/{movie_id}")
@@ -197,11 +277,14 @@ async def get_movie_detail(movie_id: int):
 async def get_recommendations(
     movie_id: int = Query(..., description="ID của bộ phim người dùng đang quan tâm"),
     k: int = Query(10, ge=1, le=50, description="Số lượng phim tương tự cần gợi ý"),
-    genre: Optional[str] = Query(None, description="Bộ lọc thể loại tùy chọn")
+    genre: Optional[str] = Query(None, description="Bộ lọc thể loại tùy chọn (chuỗi đơn hoặc phân tách bởi dấu phẩy)"),
+    genres: Optional[List[str]] = Query(None, description="Danh sách nhiều thể loại cần kết hợp lọc"),
+    match_mode: str = Query("any", description="Chế độ kết hợp: 'any' (khớp 1 thể loại), 'all' (đủ tất cả), 'exclude' (loại trừ)")
 ):
     """
     API chính: Gợi ý Top-K phim tương tự dựa trên Cosine Similarity.
     Xác thực đầu vào, kiểm tra phim hiếm/cold-start, trả về điểm tương đồng và lý do.
+    Hỗ trợ kết hợp lọc nhiều thể loại: any (OR), all (AND), exclude (loại trừ).
     """
     global MODEL
     if MODEL is None:
@@ -214,7 +297,15 @@ async def get_recommendations(
         if not exists:
             raise HTTPException(status_code=404, detail=f"Phim ID {movie_id} không tồn tại trong hệ thống.")
 
-    result = MODEL.recommend(movie_id=movie_id, top_k=k, filter_genre=genre)
+    genres_list = parse_genres_param(genres=genres, genre=genre)
+    match_mode_clean = match_mode.lower() if match_mode in ("any", "all", "exclude") else "any"
+
+    result = MODEL.recommend(
+        movie_id=movie_id, 
+        top_k=k, 
+        filter_genres=genres_list, 
+        genre_match_mode=match_mode_clean
+    )
     
     return {
         "movie_id": movie_id,
@@ -223,7 +314,9 @@ async def get_recommendations(
         "status": result.get("status", "success"),
         "warning": result.get("warning"),
         "k": k,
-        "filter_genre": genre,
+        "filter_genre": result.get("filter_genre"),
+        "filter_genres": result.get("filter_genres", genres_list),
+        "genre_match_mode": result.get("genre_match_mode", match_mode_clean),
         "recommendations": result.get("recommendations", [])
     }
 

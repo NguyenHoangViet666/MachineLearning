@@ -16,6 +16,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const genreFilter = document.getElementById("filter-genre");
   const kSelect = document.getElementById("select-k");
   const btnRecommend = document.getElementById("btn-search-recommend");
+  const btnResetFilters = document.getElementById("btn-reset-filters");
+
+  // Advanced Filter Panel Elements
+  const btnToggleFilter = document.getElementById("btn-toggle-filter");
+  const advancedFilterPanel = document.getElementById("advanced-filter-panel");
+  const filterActiveCountBadge = document.getElementById("filter-active-count-badge");
+  const btnSelectAllGenres = document.getElementById("btn-select-all-genres");
+  const btnClearGenres = document.getElementById("btn-clear-genres");
+  const filterCounterNumber = document.getElementById("filter-counter-number");
+  const genresGridScroller = document.getElementById("genres-grid-scroller");
+  const filterModeRadios = document.querySelectorAll('input[name="filter-mode-choice"]');
+  const advFooterSummary = document.getElementById("adv-footer-summary");
+  const btnPanelSearch = document.getElementById("btn-panel-search");
+  const btnPanelReset = document.getElementById("btn-panel-reset");
+  const btnPanelClose = document.getElementById("btn-panel-close");
+  const activeGenresBar = document.getElementById("active-genres-bar");
+  const activeModeIndicator = document.getElementById("active-mode-indicator");
+  const activeGenresChips = document.getElementById("active-genres-chips");
+  const btnClearAllTags = document.getElementById("btn-clear-all-tags");
 
   const seedCard = document.getElementById("seed-movie-card");
   const seedTitle = document.getElementById("seed-title");
@@ -35,16 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedMovieId = null;
   let searchDebounceTimeout = null;
 
-  // Nạp danh sách thể loại nếu mở qua Live Server (không qua Jinja template)
-  if (genreFilter && genreFilter.options.length <= 1) {
-    const defaultGenres = ["Action", "Adventure", "Animation", "Children", "Comedy", "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror", "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"];
-    defaultGenres.forEach(g => {
-      const opt = document.createElement("option");
-      opt.value = g;
-      opt.textContent = g;
-      genreFilter.appendChild(opt);
-    });
-  }
+  // State: Bộ lọc thể loại đa năng
+  const selectedGenres = new Set();
+  let genreMatchMode = "any"; // 'any' | 'exclude' | 'all'
 
   // ==================== TAB NAVIGATION ====================
   navButtons.forEach(btn => {
@@ -79,7 +91,11 @@ document.addEventListener("DOMContentLoaded", () => {
     searchDebounceTimeout = setTimeout(async () => {
       searchSpinner.classList.remove("hidden");
       try {
-        const res = await fetch(`${API_BASE}/api/movies?query=${encodeURIComponent(val)}&limit=10`);
+        let url = `${API_BASE}/api/movies?query=${encodeURIComponent(val)}&limit=10`;
+        if (selectedGenres.size > 0) {
+          url += `&genres=${encodeURIComponent(Array.from(selectedGenres).join(","))}&match_mode=${genreMatchMode}`;
+        }
+        const res = await fetch(url);
         const data = await res.json();
         renderAutocomplete(data.movies || []);
       } catch (err) {
@@ -121,12 +137,333 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Click ra ngoài thì đóng dropdown
+  // Click ra ngoài thì đóng dropdown autocomplete
   document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
       autocompleteList.classList.add("hidden");
     }
   });
+
+  // ==================== BỘ LỌC THỂ LOẠI NÂNG CAO ====================
+  // Đảm bảo các cell thể loại được bind sự kiện
+  function bindGenreCellEvents() {
+    document.querySelectorAll(".genre-item-cell").forEach(cell => {
+      cell.onclick = () => {
+        const g = cell.getAttribute("data-genre");
+        if (!g) return;
+        if (selectedGenres.has(g)) {
+          selectedGenres.delete(g);
+        } else {
+          selectedGenres.add(g);
+        }
+        updateFilterUI();
+      };
+    });
+  }
+
+  // Nạp danh sách thể loại nếu mở bằng file tĩnh/Live Server mà chưa có trong HTML
+  async function ensureGenresLoaded() {
+    const existingCells = document.querySelectorAll(".genre-item-cell");
+    if (existingCells.length === 0 && genresGridScroller) {
+      try {
+        const res = await fetch(`${API_BASE}/api/genres`);
+        if (res.ok) {
+          const data = await res.json();
+          genresGridScroller.innerHTML = (data.genres || []).map(g => `
+            <div class="genre-item-cell" data-genre="${escapeHtml(g.name)}">
+              <span class="genre-checkbox-box">
+                <svg class="check-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+              <span class="genre-item-label">${escapeHtml(g.name)}</span>
+              <span class="genre-item-badge">${g.count}</span>
+            </div>
+          `).join("");
+        }
+      } catch (err) {
+        console.warn("Không thể tải danh sách thể loại từ API:", err);
+      }
+    }
+    bindGenreCellEvents();
+  }
+
+  // Mở/đóng panel Lọc Nâng Cao
+  function toggleFilterPanel(forceOpen = null) {
+    if (!advancedFilterPanel || !btnToggleFilter) return;
+    const shouldOpen = forceOpen !== null ? forceOpen : advancedFilterPanel.classList.contains("hidden");
+    if (shouldOpen) {
+      advancedFilterPanel.classList.remove("hidden");
+      btnToggleFilter.classList.add("open");
+      btnToggleFilter.setAttribute("aria-expanded", "true");
+    } else {
+      advancedFilterPanel.classList.add("hidden");
+      btnToggleFilter.classList.remove("open");
+      btnToggleFilter.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  if (btnToggleFilter) {
+    btnToggleFilter.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFilterPanel();
+    });
+  }
+
+  if (btnPanelClose) {
+    btnPanelClose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFilterPanel(false);
+    });
+  }
+
+  // Đóng panel khi click ra bên ngoài
+  document.addEventListener("click", (e) => {
+    if (advancedFilterPanel && !advancedFilterPanel.classList.contains("hidden")) {
+      if (!advancedFilterPanel.contains(e.target) && !btnToggleFilter.contains(e.target)) {
+        toggleFilterPanel(false);
+      }
+    }
+  });
+
+  // Nút Chọn tất cả thể loại
+  if (btnSelectAllGenres) {
+    btnSelectAllGenres.addEventListener("click", () => {
+      document.querySelectorAll(".genre-item-cell").forEach(cell => {
+        const g = cell.getAttribute("data-genre");
+        if (g) selectedGenres.add(g);
+      });
+      updateFilterUI();
+    });
+  }
+
+  // Nút Bỏ chọn tất cả thể loại
+  if (btnClearGenres) {
+    btnClearGenres.addEventListener("click", () => {
+      selectedGenres.clear();
+      updateFilterUI();
+    });
+  }
+
+  // Nút Xóa toàn bộ bộ lọc trên thanh active-genres-bar
+  if (btnClearAllTags) {
+    btnClearAllTags.addEventListener("click", () => {
+      selectedGenres.clear();
+      updateFilterUI();
+      if (selectedMovieId) {
+        executeRecommendation(selectedMovieId);
+      }
+    });
+  }
+
+  // Lắng nghe thay đổi 3 chế độ (any, exclude, all)
+  filterModeRadios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.checked) {
+        genreMatchMode = radio.value;
+        document.querySelectorAll(".filter-mode-item").forEach(item => {
+          item.classList.remove("active");
+        });
+        const parentLabel = radio.closest(".filter-mode-item");
+        if (parentLabel) parentLabel.classList.add("active");
+        updateFilterUI();
+      }
+    });
+  });
+
+  // Cập nhật giao diện bộ lọc: số đếm, active tags, thông báo tóm tắt
+  function updateFilterUI() {
+    const totalSelected = selectedGenres.size;
+    const totalGenres = document.querySelectorAll(".genre-item-cell").length || 19;
+
+    // 1. Cập nhật số đếm trên header panel
+    if (filterCounterNumber) {
+      filterCounterNumber.textContent = totalSelected;
+    }
+    const countTotalEl = document.querySelector(".adv-filter-counter .count-total");
+    if (countTotalEl) {
+      countTotalEl.textContent = `/ ${totalGenres} đã chọn`;
+    }
+
+    // 2. Cập nhật badge trên nút "Lọc nâng cao"
+    if (filterActiveCountBadge) {
+      if (totalSelected > 0) {
+        filterActiveCountBadge.textContent = totalSelected;
+        filterActiveCountBadge.classList.remove("hidden");
+      } else {
+        filterActiveCountBadge.classList.add("hidden");
+      }
+    }
+
+    // 3. Đồng bộ trạng thái .checked trên từng cell thể loại
+    document.querySelectorAll(".genre-item-cell").forEach(cell => {
+      const g = cell.getAttribute("data-genre");
+      if (selectedGenres.has(g)) {
+        cell.classList.add("checked");
+      } else {
+        cell.classList.remove("checked");
+      }
+    });
+
+    // 4. Cập nhật dòng tóm tắt ở footer của dropdown
+    if (advFooterSummary) {
+      if (totalSelected === 0) {
+        advFooterSummary.textContent = "Chưa chọn thể loại nào (tìm kiếm toàn bộ kho phim)";
+      } else if (genreMatchMode === "any") {
+        advFooterSummary.textContent = `Đã chọn ${totalSelected} thể loại: Tìm phim có ít nhất 1 thể loại này (OR)`;
+      } else if (genreMatchMode === "exclude") {
+        advFooterSummary.textContent = `Đã chọn ${totalSelected} thể loại: Loại trừ các phim có thể loại này (NOT)`;
+      } else if (genreMatchMode === "all") {
+        advFooterSummary.textContent = `Đã chọn ${totalSelected} thể loại: Phim bắt buộc có đủ tất cả các thể loại này (AND)`;
+      }
+    }
+
+    // 5. Cập nhật thanh Active Tags hiển thị bên dưới thanh tìm kiếm
+    if (activeGenresBar) {
+      if (totalSelected > 0) {
+        activeGenresBar.classList.remove("hidden");
+        if (activeModeIndicator) {
+          if (genreMatchMode === "any") {
+            activeModeIndicator.textContent = "Logic: Có 1 trong các thể loại (OR)";
+          } else if (genreMatchMode === "exclude") {
+            activeModeIndicator.textContent = "Logic: Loại trừ thể loại đã chọn (NOT)";
+          } else if (genreMatchMode === "all") {
+            activeModeIndicator.textContent = "Logic: Phải có đủ các thể loại (AND)";
+          }
+        }
+
+        if (activeGenresChips) {
+          activeGenresChips.innerHTML = Array.from(selectedGenres).map(g => `
+            <span class="active-genre-tag">
+              <span>${escapeHtml(g)}</span>
+              <button type="button" class="tag-remove-btn" data-genre="${escapeHtml(g)}" title="Bỏ chọn ${escapeHtml(g)}">&times;</button>
+            </span>
+          `).join("");
+
+          activeGenresChips.querySelectorAll(".tag-remove-btn").forEach(btn => {
+            btn.onclick = (e) => {
+              e.stopPropagation();
+              const genreToRemove = btn.getAttribute("data-genre");
+              if (genreToRemove) {
+                selectedGenres.delete(genreToRemove);
+                updateFilterUI();
+                if (selectedMovieId) {
+                  executeRecommendation(selectedMovieId);
+                }
+              }
+            };
+          });
+        }
+      } else {
+        activeGenresBar.classList.add("hidden");
+        if (activeGenresChips) activeGenresChips.innerHTML = "";
+      }
+    }
+
+    // Đồng bộ với select hidden filter-genre (tương thích ngược)
+    if (genreFilter) {
+      if (totalSelected === 1 && genreMatchMode === "any") {
+        genreFilter.value = Array.from(selectedGenres)[0];
+      } else {
+        genreFilter.value = "all";
+      }
+    }
+  }
+
+  // ==================== TÌM KIẾM & LÀM MỚI ====================
+  function handleSearchAction() {
+    const query = searchInput.value.trim();
+
+    // 1. Nếu có nhập tên phim trong ô input
+    if (query) {
+      let url = `${API_BASE}/api/movies?query=${encodeURIComponent(query)}&limit=1`;
+      if (selectedGenres.size > 0) {
+        url += `&genres=${encodeURIComponent(Array.from(selectedGenres).join(","))}&match_mode=${genreMatchMode}`;
+      }
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.movies && data.movies.length > 0) {
+            selectedMovieId = data.movies[0].movieId;
+            searchInput.value = data.movies[0].title;
+            executeRecommendation(selectedMovieId);
+          } else {
+            alert("Không tìm thấy phim phù hợp với từ khóa và bộ lọc hiện tại!");
+          }
+        })
+        .catch(err => console.error("Lỗi tìm kiếm:", err));
+      return;
+    }
+
+    // 2. Nếu đã có phim được chọn từ trước (hoặc phim mẫu)
+    if (selectedMovieId) {
+      executeRecommendation(selectedMovieId);
+      return;
+    }
+
+    // 3. Nếu chưa chọn phim nhưng có chọn thể loại: tìm phim đầu tiên phù hợp với thể loại
+    if (selectedGenres.size > 0) {
+      const gList = Array.from(selectedGenres).join(",");
+      const k = parseInt(kSelect?.value) || 10;
+      fetch(`${API_BASE}/api/movies?genres=${encodeURIComponent(gList)}&match_mode=${genreMatchMode}&limit=${k}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.movies && data.movies.length > 0) {
+            selectedMovieId = data.movies[0].movieId;
+            searchInput.value = data.movies[0].title;
+            executeRecommendation(selectedMovieId);
+          } else {
+            alert("Không có phim nào thỏa mãn bộ lọc thể loại đã chọn!");
+          }
+        })
+        .catch(err => console.error("Lỗi tìm phim theo thể loại:", err));
+      return;
+    }
+
+    // 4. Mặc định: gợi ý phim Toy Story (1)
+    selectedMovieId = 1;
+    executeRecommendation(1);
+  }
+
+  // Đặt lại toàn bộ bộ lọc và từ khóa tìm kiếm
+  function resetAllFilters() {
+    searchInput.value = "";
+    selectedGenres.clear();
+    genreMatchMode = "any";
+
+    // Đặt lại radio mode về 'any'
+    const radioAny = document.querySelector('input[name="filter-mode-choice"][value="any"]');
+    if (radioAny) {
+      radioAny.checked = true;
+      document.querySelectorAll(".filter-mode-item").forEach(item => item.classList.remove("active"));
+      const labelAny = document.getElementById("label-mode-any");
+      if (labelAny) labelAny.classList.add("active");
+    }
+
+    if (kSelect) kSelect.value = "10";
+    updateFilterUI();
+
+    // Reset về phim mẫu mặc định: Toy Story (movieId: 1)
+    selectedMovieId = 1;
+    executeRecommendation(1);
+  }
+
+  // Gắn sự kiện các nút Tìm Kiếm
+  if (btnRecommend) {
+    btnRecommend.addEventListener("click", handleSearchAction);
+  }
+  if (btnPanelSearch) {
+    btnPanelSearch.addEventListener("click", () => {
+      toggleFilterPanel(false);
+      handleSearchAction();
+    });
+  }
+
+  // Gắn sự kiện các nút Làm Mới
+  if (btnResetFilters) {
+    btnResetFilters.addEventListener("click", resetAllFilters);
+  }
+  if (btnPanelReset) {
+    btnPanelReset.addEventListener("click", resetAllFilters);
+  }
 
   // ==================== QUICK SEED CHIPS ====================
   document.querySelectorAll(".seed-chip").forEach(chip => {
@@ -140,48 +477,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ==================== RECOMMENDATION ACTION ====================
-  btnRecommend.addEventListener("click", () => {
-    if (selectedMovieId) {
-      executeRecommendation(selectedMovieId);
-    } else {
-      // Tìm thử tên trong input
-      const query = searchInput.value.trim();
-      if (!query) {
-        alert("Vui lòng nhập tên phim hoặc chọn một phim để bắt đầu!");
-        return;
-      }
-      fetch(`${API_BASE}/api/movies?query=${encodeURIComponent(query)}&limit=1`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.movies && data.movies.length > 0) {
-            selectedMovieId = data.movies[0].movieId;
-            executeRecommendation(selectedMovieId);
-          } else {
-            alert("Không tìm thấy phim này trong cơ sở dữ liệu!");
-          }
-        });
-    }
-  });
+  if (kSelect) {
+    kSelect.addEventListener("change", () => {
+      if (selectedMovieId) executeRecommendation(selectedMovieId);
+    });
+  }
 
-  genreFilter.addEventListener("change", () => {
-    if (selectedMovieId) executeRecommendation(selectedMovieId);
-  });
-
-  kSelect.addEventListener("change", () => {
-    if (selectedMovieId) executeRecommendation(selectedMovieId);
-  });
-
+  // ==================== THỰC THI GỢI Ý (COSINE + FILTER) ====================
   async function executeRecommendation(movieId) {
-    const k = parseInt(kSelect.value) || 10;
-    const genre = genreFilter.value;
+    const k = parseInt(kSelect?.value) || 10;
     
     // Hiển thị trạng thái đang tải
     recsGrid.innerHTML = `
       <div class="empty-state">
         <div class="spinner" style="position:static; margin:0 auto 1rem; width:36px; height:36px;"></div>
         <h4>Đang tính toán độ tương đồng Cosine...</h4>
-        <p>Đang truy vấn ma trận thưa Item-User trên không gian 610 chiều.</p>
+        <p>Đang truy vấn ma trận thưa Item-User trên không gian 610 chiều và áp dụng bộ lọc thể loại kết hợp.</p>
       </div>
     `;
 
@@ -199,17 +510,25 @@ document.addEventListener("DOMContentLoaded", () => {
         seedCard.classList.remove("hidden");
       }
 
-      // 2. Lấy gợi ý
+      // 2. Lấy gợi ý có tích hợp lọc thể loại nâng cao
       let url = `${API_BASE}/api/recommendations?movie_id=${movieId}&k=${k}`;
-      if (genre && genre !== "all") {
-        url += `&genre=${encodeURIComponent(genre)}`;
+      if (selectedGenres.size > 0) {
+        const genresParam = Array.from(selectedGenres).join(",");
+        url += `&genres=${encodeURIComponent(genresParam)}&match_mode=${genreMatchMode}`;
+      } else if (genreFilter && genreFilter.value && genreFilter.value !== "all") {
+        url += `&genre=${encodeURIComponent(genreFilter.value)}`;
       }
 
       const recRes = await fetch(url);
       const recData = await recRes.json();
       const elapsed = Math.round(performance.now() - startTime);
 
-      queryMetaInfo.textContent = `Độ trễ API: ${elapsed}ms | K=${k}`;
+      let filterDesc = "Toàn bộ";
+      if (selectedGenres.size > 0) {
+        const modeLabel = genreMatchMode === "any" ? "OR" : genreMatchMode === "exclude" ? "NOT" : "AND";
+        filterDesc = `${selectedGenres.size} thể loại (${modeLabel})`;
+      }
+      queryMetaInfo.textContent = `Độ trễ API: ${elapsed}ms | K=${k} | Bộ lọc: ${filterDesc}`;
 
       // Xử lý cảnh báo (Warning) nếu dữ liệu thưa
       if (recData.warning) {
@@ -234,11 +553,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderRecommendations(items) {
     if (!items || items.length === 0) {
+      const modeText = genreMatchMode === "any" ? "chứa ít nhất 1 thể loại" : genreMatchMode === "exclude" ? "loại trừ thể loại" : "chứa đầy đủ các thể loại";
       recsGrid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🔍</div>
           <h4>Không tìm thấy phim tương đồng phù hợp</h4>
-          <p>Phim này có thể có quá ít tương tác hoặc không khớp với bộ lọc thể loại đã chọn.</p>
+          <p>Phim này có thể có quá ít tương tác hoặc không khớp với bộ lọc thể loại (${modeText}) đã chọn.</p>
         </div>
       `;
       recsCountTitle.textContent = "Không có kết quả";
@@ -249,6 +569,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recsGrid.innerHTML = items.map((item, idx) => {
       const simPercent = Math.min(100, Math.max(0, Math.round(item.similarity_score * 100)));
+
+      // Render genres thành các badge pill với highlight nếu khớp với thể loại đang chọn
+      const genresList = (item.genres || "").split(/[|,]/).map(g => g.trim()).filter(Boolean);
+      const genresHtml = genresList.map(g => {
+        const isMatched = selectedGenres.has(g);
+        return `<span class="genre-pill ${isMatched ? 'matched' : ''}">${escapeHtml(g)}</span>`;
+      }).join("");
+
       return `
         <div class="rec-card">
           <div>
@@ -260,7 +588,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
             <h4 class="rec-title">${escapeHtml(item.title)}</h4>
-            <div class="rec-genres">${escapeHtml(item.genres)}</div>
+            <div class="rec-genres">${genresHtml}</div>
             
             <div class="sim-bar-container" title="Độ tương đồng: ${simPercent}%">
               <div class="sim-bar-fill" style="width: ${simPercent}%"></div>
@@ -273,11 +601,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="rec-bottom">
             <span>⭐ Rating: <strong>${item.rating_mean.toFixed(1)}</strong>/5.0</span>
-            <span>🗳️ <strong>${item.rating_count.toLocaleString()}</strong> đánh giá</span>
+            <button type="button" class="btn-select-seed" data-id="${item.movieId}" data-title="${escapeHtml(item.title)}" title="Chọn làm phim hạt giống để tìm phim tương tự">
+              <span>Đổi hạt giống</span> ↗
+            </button>
           </div>
         </div>
       `;
     }).join("");
+
+    // Gắn sự kiện "Đổi hạt giống" trên các card gợi ý
+    recsGrid.querySelectorAll(".btn-select-seed").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = parseInt(btn.getAttribute("data-id"));
+        const title = btn.getAttribute("data-title");
+        if (id) {
+          selectedMovieId = id;
+          searchInput.value = title;
+          executeRecommendation(id);
+          window.scrollTo({ top: seedCard.offsetTop - 80, behavior: "smooth" });
+        }
+      });
+    });
   }
 
   // ==================== DASHBOARD: 10 FAILURE CASES ====================
@@ -508,7 +852,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Tự động load phim mẫu mặc định: Toy Story (movieId: 1)
+  // Khởi tạo bộ lọc thể loại & tự động load phim mẫu mặc định: Toy Story (movieId: 1)
+  ensureGenresLoaded();
+  updateFilterUI();
   selectedMovieId = 1;
   executeRecommendation(1);
 });
