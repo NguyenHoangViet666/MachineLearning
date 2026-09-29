@@ -37,6 +37,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           Phạm Vi & Model Card
         </button>
+        <button class="nav-btn" id="nav-btn-chat" title="Mở Trợ lý ảo CineBot (In-House NLP)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 10h.01"></path><path d="M12 10h.01"></path><path d="M16 10h.01"></path></svg>
+          Trợ Lý CineBot
+          <span class="badge-nlp-tag">AI</span>
+        </button>
       </nav>
 
       <div class="model-badge">
@@ -339,8 +344,12 @@
           
           <div class="info-list">
             <div class="info-row">
+              <span class="info-k">Cơ sở đào tạo:</span>
+              <span class="info-v">Đại học SPKT Hưng Yên (HYUTE)</span>
+            </div>
+            <div class="info-row">
               <span class="info-k">Học phần:</span>
-              <span class="info-v">Học máy cơ bản — Bài 1 (Vector & Cosine)</span>
+              <span class="info-v">Học máy cơ bản (Năm học 2026–2027)</span>
             </div>
             <div class="info-row">
               <span class="info-k">Lớp:</span>
@@ -351,8 +360,12 @@
               <span class="info-v">PGS.TS. NGUYỄN VĂN HẬU</span>
             </div>
             <div class="info-row">
-              <span class="info-k">Hình thức:</span>
-              <span class="info-v">Nhóm 02 sinh viên</span>
+              <span class="info-k">Sinh viên 1:</span>
+              <span class="info-v"><strong>Nguyễn Hoàng Việt</strong> (MSV: 10123357)</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">Sinh viên 2:</span>
+              <span class="info-v"><strong>Vũ Thành Minh</strong> (MSV: 10123xxx)</span>
             </div>
             <div class="info-row">
               <span class="info-k">Tập dữ liệu:</span>
@@ -381,10 +394,86 @@
 
   <footer class="footer">
     <div class="footer-content">
-      <p>© 2026 MovieLens Recommendation Project — Học máy cơ bản. Xây dựng bởi Nhóm 02 sinh viên.</p>
+      <p>© 2026 MovieLens Recommendation Project — Học máy cơ bản. Xây dựng bởi <strong>Nguyễn Hoàng Việt</strong> (10123357) & <strong>Vũ Thành Minh</strong> — Lớp 12523W.1, Trường Đại học SPKT Hưng Yên (HYUTE).</p>
       <p class="footer-sub">Dữ liệu nguồn trích dẫn từ GroupLens Research (Harper & Konstan, 2015).</p>
     </div>
   </footer>
+
+  <!-- ==================== CINEBOT FLOATING CHATBOT WIDGET ==================== -->
+  <div class="cinebot-widget-container" id="cinebot-container">
+    <!-- Floating Action Button (FAB) -->
+    <button class="cinebot-fab" id="cinebot-fab" aria-label="Mở Trợ lý ảo CineBot" title="Trợ lý ảo CineBot (In-House NLP)">
+      <div class="cinebot-fab-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <path d="M8 10h.01"></path>
+          <path d="M12 10h.01"></path>
+          <path d="M16 10h.01"></path>
+        </svg>
+      </div>
+      <span class="cinebot-fab-badge">AI</span>
+    </button>
+
+    <!-- Chat Popup Window -->
+    <div class="cinebot-window" id="cinebot-window" role="dialog" aria-labelledby="cinebot-header-title">
+      <!-- Header -->
+      <div class="cinebot-header">
+        <div class="cinebot-header-left">
+          <div class="cinebot-avatar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path><rect x="4" y="8" width="16" height="12" rx="2"></rect><circle cx="9" cy="13" r="1.5"></circle><circle cx="15" cy="13" r="1.5"></circle><path d="M9 17h6"></path></svg>
+          </div>
+          <div>
+            <div class="cinebot-title" id="cinebot-header-title">
+              CineBot <span class="cinebot-nlp-tag">In-House NLP</span>
+            </div>
+            <div class="cinebot-status"><span class="status-dot"></span> Sẵn sàng • 100% Offline</div>
+          </div>
+        </div>
+        <div class="cinebot-header-actions">
+          <button id="cinebot-btn-clear" class="cinebot-icon-btn" title="Xóa lịch sử chat" aria-label="Xóa lịch sử chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+          <button id="cinebot-btn-close" class="cinebot-icon-btn" title="Thu nhỏ" aria-label="Thu nhỏ khung chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Chips -->
+      <div class="cinebot-quick-chips" id="cinebot-quick-chips">
+        <button class="chip-btn" data-query="Gợi ý phim giống Toy Story">🎬 Giống Toy Story</button>
+        <button class="chip-btn" data-query="Tìm phim giống The Matrix">🕶️ Giống The Matrix</button>
+        <button class="chip-btn" data-query="Có phim hoạt hình nào hay không?">🍿 Top hoạt hình</button>
+        <button class="chip-btn" data-query="Hôm nay tôi buồn quá">🌈 Phim chữa lành</button>
+        <button class="chip-btn" data-query="Độ tương đồng Cosine là gì?">📐 Công thức Cosine</button>
+      </div>
+
+      <!-- Messages Area -->
+      <div class="cinebot-messages" id="cinebot-messages">
+        <div class="chat-msg bot-msg">
+          <div class="msg-bubble">
+            <p>👋 <strong>Chào bạn! Tôi là CineBot</strong> — Trợ lý ảo điện ảnh được phát triển hoàn toàn nội bộ bằng thuật toán <strong>TF-IDF & Cosine Similarity</strong>.</p>
+            <p>Tôi có thể giúp bạn tìm phim tương tự, khám phá theo tâm trạng hoặc giải thích công thức toán học của hệ thống. Bạn muốn tìm phim gì hôm nay?</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="cinebot-typing" id="cinebot-typing" style="display: none;">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Input Form -->
+      <div class="cinebot-input-area">
+        <form id="cinebot-form" class="cinebot-input-form">
+          <input type="text" id="cinebot-input" placeholder="Hỏi CineBot (VD: Phim giống Inception...)" autocomplete="off">
+          <button type="submit" id="cinebot-send-btn" aria-label="Gửi tin nhắn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/app.js" onerror="this.onerror=null;this.src='../static/js/app.js';"></script>
 </body>

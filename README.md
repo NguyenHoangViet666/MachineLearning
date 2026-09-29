@@ -40,6 +40,7 @@ Học máy/
 │   ├── data.py                    # Script tự động tải, kiểm tra chất lượng & chia tập
 │   ├── features.py                # Xây dựng ma trận thưa CSR, khử thiên vị mean-centering
 │   ├── models.py                  # PopularityRecommender (Baseline) & CosineItemItemRecommender
+│   ├── chatbot_engine.py          # Trợ lý ảo CineBot In-House NLP (TF-IDF & Cosine Similarity)
 │   ├── train.py                   # Huấn luyện mô hình, chạy 4 thí nghiệm, vẽ biểu đồ
 │   └── evaluate.py                # Đo lường HitRate@K, Precision@K, Coverage, Latency
 ├── models/

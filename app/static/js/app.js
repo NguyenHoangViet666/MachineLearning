@@ -316,6 +316,198 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/'/g, "&#039;");
   }
 
+  // ==================== CINEBOT IN-HOUSE NLP CLIENT LOGIC ====================
+  const cinebotFab = document.getElementById("cinebot-fab");
+  const cinebotWindow = document.getElementById("cinebot-window");
+  const cinebotBtnClose = document.getElementById("cinebot-btn-close");
+  const cinebotBtnClear = document.getElementById("cinebot-btn-clear");
+  const cinebotForm = document.getElementById("cinebot-form");
+  const cinebotInput = document.getElementById("cinebot-input");
+  const cinebotMessages = document.getElementById("cinebot-messages");
+  const cinebotTyping = document.getElementById("cinebot-typing");
+  const cinebotQuickChips = document.getElementById("cinebot-quick-chips");
+  const navBtnChat = document.getElementById("nav-btn-chat");
+
+  const initialBotWelcome = `
+    <div class="chat-msg bot-msg">
+      <div class="msg-bubble">
+        <p>👋 <strong>Chào bạn! Tôi là CineBot</strong> — Trợ lý ảo điện ảnh được phát triển hoàn toàn nội bộ bằng thuật toán <strong>TF-IDF & Cosine Similarity</strong>.</p>
+        <p>Tôi có thể giúp bạn tìm phim tương tự, khám phá theo tâm trạng hoặc giải thích công thức toán học của hệ thống. Bạn muốn tìm phim gì hôm nay?</p>
+      </div>
+    </div>
+  `;
+
+  function toggleCinebot(forceOpen = null) {
+    if (!cinebotWindow) return;
+    const shouldOpen = forceOpen !== null ? forceOpen : !cinebotWindow.classList.contains("open");
+    if (shouldOpen) {
+      cinebotWindow.classList.add("open");
+      setTimeout(() => { cinebotInput?.focus(); }, 150);
+    } else {
+      cinebotWindow.classList.remove("open");
+    }
+  }
+
+  if (cinebotFab) {
+    cinebotFab.addEventListener("click", () => toggleCinebot());
+  }
+
+  if (navBtnChat) {
+    navBtnChat.addEventListener("click", () => toggleCinebot(true));
+  }
+
+  if (cinebotBtnClose) {
+    cinebotBtnClose.addEventListener("click", () => toggleCinebot(false));
+  }
+
+  if (cinebotBtnClear) {
+    cinebotBtnClear.addEventListener("click", () => {
+      if (cinebotMessages) {
+        cinebotMessages.innerHTML = initialBotWelcome;
+      }
+    });
+  }
+
+  // Quick Chips
+  if (cinebotQuickChips) {
+    cinebotQuickChips.addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip-btn");
+      if (chip && chip.dataset.query) {
+        sendChatQuery(chip.dataset.query);
+      }
+    });
+  }
+
+  function appendUserMessage(text) {
+    const div = document.createElement("div");
+    div.className = "chat-msg user-msg";
+    div.innerHTML = `<div class="msg-bubble"><p>${escapeHtml(text)}</p></div>`;
+    cinebotMessages.appendChild(div);
+    scrollChatBottom();
+  }
+
+  function formatMarkdown(text) {
+    if (!text) return "";
+    let html = escapeHtml(text);
+    // Bold: **text**
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text*
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Math formulas: $formula$
+    html = html.replace(/\$(.*?)\$/g, '<code style="color:var(--accent-secondary);">$1</code>');
+    // Blockquote: &gt; text
+    html = html.replace(/^&gt;\s*(.*)$/gm, '<blockquote>$1</blockquote>');
+    // Unordered lists: - item
+    html = html.replace(/^[•\-]\s*(.*)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    // Newlines
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+    return `<p>${html}</p>`;
+  }
+
+  function appendBotMessage(replyHtml, recommendations = []) {
+    const div = document.createElement("div");
+    div.className = "chat-msg bot-msg";
+
+    let recsHtml = "";
+    if (recommendations && recommendations.length > 0) {
+      recsHtml = `<div class="chat-movie-cards">` + recommendations.map(rec => `
+        <div class="chat-movie-item">
+          <div class="chat-movie-top">
+            <span class="chat-movie-title">${escapeHtml(rec.title)}</span>
+            <span class="chat-similarity-badge">${typeof rec.similarity_score === 'number' ? (rec.similarity_score * 100).toFixed(1) + '%' : rec.similarity_score}</span>
+          </div>
+          <div class="chat-movie-genres">${escapeHtml(rec.genres)}</div>
+          <div class="chat-movie-actions">
+            <button class="chat-action-btn btn-chat-ask-similar" data-title="${escapeHtml(rec.title)}">
+              🔍 Tìm phim tương tự
+            </button>
+            <button class="chat-action-btn btn-chat-view-main" data-id="${rec.movieId}">
+              ↗ Xem trên web
+            </button>
+          </div>
+        </div>
+      `).join("") + `</div>`;
+    }
+
+    div.innerHTML = `<div class="msg-bubble">${replyHtml}${recsHtml}</div>`;
+    cinebotMessages.appendChild(div);
+
+    // Gắn sự kiện cho các nút hành động trong thẻ phim
+    div.querySelectorAll(".btn-chat-ask-similar").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const title = btn.getAttribute("data-title");
+        sendChatQuery(`Gợi ý phim giống ${title}`);
+      });
+    });
+
+    div.querySelectorAll(".btn-chat-view-main").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mId = parseInt(btn.getAttribute("data-id"));
+        if (mId) {
+          // Chuyển sang Tab 1 và thực thi gợi ý
+          const recommenderNavBtn = document.querySelector('[data-tab="tab-recommender"]');
+          if (recommenderNavBtn) recommenderNavBtn.click();
+          selectedMovieId = mId;
+          executeRecommendation(mId);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
+
+    scrollChatBottom();
+  }
+
+  function scrollChatBottom() {
+    if (cinebotMessages) {
+      cinebotMessages.scrollTop = cinebotMessages.scrollHeight;
+    }
+  }
+
+  async function sendChatQuery(text) {
+    if (!text || !text.trim()) return;
+    const cleanText = text.trim();
+
+    appendUserMessage(cleanText);
+    if (cinebotInput) cinebotInput.value = "";
+
+    if (cinebotTyping) cinebotTyping.style.display = "flex";
+    scrollChatBottom();
+
+    try {
+      const res = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: cleanText, k: 5 })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (cinebotTyping) cinebotTyping.style.display = "none";
+
+      const formattedReply = formatMarkdown(data.reply);
+      appendBotMessage(formattedReply, data.recommendations);
+    } catch (err) {
+      console.error("CineBot Error:", err);
+      if (cinebotTyping) cinebotTyping.style.display = "none";
+      appendBotMessage("<p>⚠️ <em>Đã có sự cố kết nối với CineBot. Vui lòng kiểm tra lại server hoặc thử lại sau!</em></p>");
+    }
+  }
+
+  if (cinebotForm) {
+    cinebotForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const val = cinebotInput?.value;
+      if (val) {
+        sendChatQuery(val);
+      }
+    });
+  }
+
   // Tự động load phim mẫu mặc định: Toy Story (movieId: 1)
   selectedMovieId = 1;
   executeRecommendation(1);

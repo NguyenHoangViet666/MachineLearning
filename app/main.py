@@ -22,6 +22,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from src.models import CosineItemItemRecommender
+from src.chatbot_engine import CineBotNLPEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -62,11 +63,12 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 MODEL: Optional[CosineItemItemRecommender] = None
 MOVIES_DF: Optional[Any] = None
 GENRES_LIST: List[str] = []
+CHATBOT: Optional[CineBotNLPEngine] = None
 
 
 def load_assets():
     """Nạp Model và dữ liệu phim đã được lưu sẵn (Offline Precomputed)."""
-    global MODEL, MOVIES_DF, GENRES_LIST
+    global MODEL, MOVIES_DF, GENRES_LIST, CHATBOT
     
     # 1. Nạp danh sách phim
     movies_path = os.path.join(PROCESSED_DATA_DIR, "movies_clean.csv")
@@ -90,6 +92,11 @@ def load_assets():
         logger.info("Model CosineItemItemRecommender đã được nạp thành công.")
     else:
         logger.warning(f"Chưa tìm thấy {model_path}. Server đang chạy ở chế độ chờ model.")
+
+    # 3. Nạp CineBot In-House NLP Engine
+    if MOVIES_DF is not None:
+        CHATBOT = CineBotNLPEngine(movies_df=MOVIES_DF)
+        logger.info("CineBot In-House NLP Engine đã sẵn sàng phục vụ.")
 
 
 @app.on_event("startup")
@@ -117,6 +124,19 @@ class RecommendationResponse(BaseModel):
     k: int
     filter_genre: Optional[str] = None
     recommendations: List[MovieRecommendationItem]
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="Câu hỏi hoặc yêu cầu của người dùng")
+    k: int = Field(5, ge=1, le=20, description="Số lượng phim gợi ý tối đa")
+
+
+class ChatResponse(BaseModel):
+    intent: str = Field(..., description="Ý định được phân loại bởi NLP Engine")
+    reply: str = Field(..., description="Nội dung phản hồi Markdown tự nhiên")
+    recommendations: List[Dict[str, Any]] = Field(default=[], description="Danh sách phim gợi ý đính kèm")
+    referenced_movie: Optional[Dict[str, Any]] = Field(default=None, description="Thông tin phim được trích xuất")
+    target_genre: Optional[str] = Field(default=None, description="Thể loại được trích xuất")
 
 
 # Endpoints
@@ -228,6 +248,28 @@ async def get_failure_cases():
     with open(fail_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return data
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_with_bot(payload: ChatRequest):
+    """
+    Endpoint Trợ lý ảo CineBot (In-House NLP Engine).
+    Phân loại ý định bằng TF-IDF + Cosine Distance, trích xuất thực thể và
+    gọi trực tiếp động cơ CosineItemItemRecommender để gợi ý phim và giải thích.
+    Hoàn toàn offline, không gọi API bên thứ ba.
+    """
+    global CHATBOT, MODEL
+    if CHATBOT is None:
+        load_assets()
+        if CHATBOT is None:
+            raise HTTPException(status_code=503, detail="CineBot NLP Engine chưa sẵn sàng.")
+
+    result = CHATBOT.process_message(
+        message=payload.message,
+        recommender=MODEL,
+        top_k=payload.k
+    )
+    return result
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 {
   "model_name": "MovieLens Item-Item Cosine Recommender",
   "version": "1.0.0",
-  "author": "Nhóm 02 sinh viên (Lớp 12523W.1)",
+  "author": "Nguyễn Hoàng Việt (MSV 10123357) & Vũ Thành Minh (Lớp 12523W.1, ĐH SPKT Hưng Yên - HYUTE)",
   "intended_use": {
     "primary_task": "Item-to-item movie recommendation based on user interaction vectors",
     "intended_users": "Nền tảng xem phim, phục vụ người dùng tìm phim tương tự",
