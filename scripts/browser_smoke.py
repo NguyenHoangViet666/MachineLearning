@@ -46,6 +46,41 @@ try:
         page.locator('.seed-chip[data-id="1"]').click()
         expect(page.locator("#seed-title")).to_contain_text("Toy Story")
         expect(page.locator(".rec-card").first).to_be_visible()
+        # Movie details: title click, focus restoration and recommendation action.
+        first_title = page.locator(".rec-title .movie-detail-link").first
+        expected_title = first_title.inner_text()
+        first_title.click()
+        expect(page.locator("#movie-detail-dialog")).to_be_visible()
+        expect(page.locator("#movie-detail-title")).to_have_text(expected_title)
+        expect(page.locator("#movie-detail-year")).not_to_have_text("")
+        expect(page.locator("#movie-detail-rating")).to_contain_text("/ 5.0 sao")
+        if args.screenshots:
+            page.screenshot(path=str(root / "reports/figures/movie_detail_modal.png"))
+        page.keyboard.press("Escape")
+        expect(page.locator("#movie-detail-dialog")).not_to_be_visible()
+        expect(first_title).to_be_focused()
+        page.locator("#seed-title").click()
+        expect(page.locator("#movie-detail-title")).to_contain_text("Toy Story")
+        page.locator("#movie-detail-recommend").click()
+        expect(page.locator("#movie-detail-dialog")).not_to_be_visible()
+        # Full K domain is accepted; empty/fractional/out-of-range input never sends a request.
+        k_input = page.locator("#select-k")
+        for k in (1, 50):
+            k_input.fill(str(k))
+            with page.expect_response(lambda response: "/api/recommendations?" in response.url and f"k={k}&" in response.url or "/api/recommendations?" in response.url and response.url.endswith(f"k={k}")) as pending_k:
+                page.locator("#btn-search-recommend").click()
+            assert pending_k.value.status == 200 and pending_k.value.json()["k"] == k
+        sent = []
+        page.on("request", lambda request: sent.append(request.url) if "/api/recommendations?" in request.url else None)
+        for value in ("", "0", "51", "1.5"):
+            count_before = len(sent)
+            k_input.fill(value)
+            page.locator("#btn-search-recommend").click()
+            expect(page.locator("#k-error")).to_be_visible()
+            expect(k_input).to_have_value(value)
+            assert len(sent) == count_before
+        k_input.fill("10")
+        expect(page.locator("#k-error")).not_to_be_visible()
         page.locator("#year-min").fill("1990")
         page.locator("#year-max").fill("2010")
         with page.expect_response(lambda response: "/api/recommendations?" in response.url and "year_min=1990" in response.url) as pending:
@@ -62,6 +97,10 @@ try:
         page.locator(f'.autocomplete-item[data-id="{cold["movieId"]}"]').click()
         expect(page.locator("#seed-warning-box")).to_be_visible()
         expect(page.locator("#seed-warning-msg")).not_to_have_text("")
+        expect(page.locator("#movie-detail-dialog")).to_be_visible()
+        expect(page.locator("#movie-detail-warning")).to_be_visible()
+        expect(page.locator("#movie-detail-recommend")).to_be_disabled()
+        page.locator("#movie-detail-close").click()
         page.locator('[data-tab="tab-dashboard"]').click()
         expect(page.locator("#comparison-table-body tr")).to_have_count(3)
         expect(page.locator("#failure-table-body tr")).to_have_count(10)
@@ -75,9 +114,14 @@ try:
         page.set_viewport_size({"width": 390, "height": 844})
         page.locator('[data-tab="tab-recommender"]').click()
         expect(page.locator("#year-min")).to_be_visible()
+        page.locator("#seed-title").click()
+        expect(page.locator("#movie-detail-dialog")).to_be_visible()
+        bounds = page.locator("#movie-detail-dialog").bounding_box()
+        assert bounds["x"] >= 0 and bounds["x"] + bounds["width"] <= 390
+        page.locator("#movie-detail-close").click()
         assert not errors, errors
         browser.close()
-    print("Browser passed: search/selection, year filters/errors, cold-start warning, real dashboard, model card and mobile controls.")
+    print("Browser passed: movie details/actions/focus, K 1-50/errors, search, years, cold-start, dashboard and mobile dialog.")
 finally:
     server.terminate()
     try:

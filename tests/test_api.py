@@ -43,6 +43,22 @@ def test_cold_start_preserves_warning(client):
     assert data["status"] == "warning" and data["warning"] and data["recommendations"] == []
 
 
+def test_movie_details_include_year_statistics_and_availability(client):
+    movie = client.get("/api/movies/1").json()
+    assert movie["year"] == 1995 and movie["rating_count"] == 2
+    assert movie["rating_mean"] == 4.5 and movie["can_recommend"]
+    cold = client.get("/api/movies/4").json()
+    assert cold["year"] == 2002 and not cold["can_recommend"] and cold["warning"]
+
+
+def test_movie_details_handle_unknown_year_and_missing_model(client, monkeypatch):
+    serving.MOVIES_DF.loc[serving.MOVIES_DF.movieId == 1, "title"] = "Unknown year"
+    monkeypatch.setattr(serving, "MODEL", None)
+    movie = client.get("/api/movies/1").json()
+    assert movie["year"] is None
+    assert not movie["can_recommend"] and movie["warning"]
+
+
 def test_unknown_movie_and_unavailable_assets(client, monkeypatch):
     assert client.get("/api/recommendations?movie_id=9999").status_code == 404
     assert client.get("/api/movies/9999").status_code == 404

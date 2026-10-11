@@ -2077,3 +2077,17 @@ body {
 /* Release-year range follows the same filters in search and recommendations. */
 .year-filter { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .year-filter input { width: 6rem; padding: .55rem; border: 1px solid #64748b; border-radius: .5rem; background: #0f172a; color: #fff; }
+.k-select-wrap { flex-wrap: wrap; }
+.k-select-wrap input { width: 5rem; padding: .55rem; border: 1px solid #64748b; border-radius: .5rem; background: #0f172a; color: #fff; }
+.k-select-wrap small { flex-basis: 100%; }
+.input-error { color: #fca5a5; }
+#select-k[aria-invalid="true"] { border-color: #f87171; }
+.movie-detail-link { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
+.movie-detail-link:focus-visible { outline: 2px solid #38bdf8; outline-offset: 4px; }
+#movie-detail-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto; padding: 1.5rem; border: 1px solid #64748b; border-radius: 1rem; background: #0f172a; color: #e2e8f0; }
+#movie-detail-dialog::backdrop { background: rgb(0 0 0 / 70%); }
+.movie-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.movie-detail-header h2 { margin: 0; overflow-wrap: anywhere; }
+.movie-detail-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .8rem; }
+.movie-detail-fields dd { margin: 0; overflow-wrap: anywhere; }
+#movie-detail-dialog p { margin-block: 1rem; }

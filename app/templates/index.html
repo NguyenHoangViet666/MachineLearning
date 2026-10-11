@@ -206,13 +206,10 @@
             <input id="year-max" type="number" min="1870" max="2100" placeholder="Bất kỳ">
           </div>
           <div class="control-item k-select-wrap">
-            <label for="select-k">Số lượng (K):</label>
-            <select id="select-k">
-              <option value="5">Top 5</option>
-              <option value="10" selected>Top 10 (Mặc định)</option>
-              <option value="15">Top 15</option>
-              <option value="20">Top 20</option>
-            </select>
+            <label for="select-k">Số phim gợi ý K (1–50):</label>
+            <input id="select-k" type="number" min="1" max="50" step="1" required value="10" aria-describedby="k-help k-error">
+            <small id="k-help">Nhập số nguyên từ 1 đến 50 phim.</small>
+            <small id="k-error" role="alert" class="input-error hidden"></small>
           </div>
 
           <!-- Hidden select for compatibility -->
@@ -346,7 +343,7 @@
         <div class="seed-badge">Phim Gốc Được Chọn</div>
         <div class="seed-content">
           <div class="seed-main-info">
-            <h2 id="seed-title" class="seed-title">...</h2>
+            <h2 class="seed-title"><button type="button" id="seed-title" class="movie-detail-link" title="Xem chi tiết phim">...</button></h2>
             <div id="seed-genres" class="seed-genres">...</div>
           </div>
           <div class="seed-stats">
@@ -619,6 +616,24 @@
     </section>
 
   </main>
+
+  <dialog id="movie-detail-dialog" aria-labelledby="movie-detail-title" aria-describedby="movie-detail-status">
+    <div class="movie-detail-header">
+      <h2 id="movie-detail-title">Chi tiết phim</h2>
+      <button type="button" id="movie-detail-close" class="btn-secondary" aria-label="Đóng chi tiết phim">Đóng ×</button>
+    </div>
+    <p id="movie-detail-status" role="status">Đang tải...</p>
+    <dl id="movie-detail-fields" class="movie-detail-fields hidden">
+      <dt>Mã phim</dt><dd id="movie-detail-id"></dd>
+      <dt>Năm phát hành</dt><dd id="movie-detail-year"></dd>
+      <dt>Thể loại</dt><dd id="movie-detail-genres"></dd>
+      <dt>Số lượt đánh giá trong train</dt><dd id="movie-detail-count"></dd>
+      <dt>Rating trung bình (0.5–5.0 sao)</dt><dd id="movie-detail-rating"></dd>
+    </dl>
+    <p id="movie-detail-warning" class="warning-alert hidden"></p>
+    <p>Thống kê từ lịch sử đánh giá; không phải kết luận tuyệt đối về chất lượng phim.</p>
+    <button type="button" id="movie-detail-recommend" class="btn-primary" disabled>Gợi ý từ phim này</button>
+  </dialog>
 
   <footer class="footer">
     <div class="footer-content">
