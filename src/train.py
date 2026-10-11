@@ -26,6 +26,7 @@ from src.data import (
     split_train_val_test, 
     save_processed_data
 )
+from src.data import clean_and_document
 from src.models import PopularityRecommender, CosineItemItemRecommender
 from src.evaluate import evaluate_recommender
 
@@ -80,279 +81,136 @@ def plot_eda(ratings_df: pd.DataFrame, movies_df: pd.DataFrame):
     logger.info("Đã lưu biểu đồ EDA vào reports/figures/.")
 
 
-def run_experiment_1(train_df: pd.DataFrame, test_df: pd.DataFrame, movies_df: pd.DataFrame) -> Dict[str, Any]:
-    """Thí nghiệm 1: So sánh Baseline Phổ biến (Popularity) với Cosine Item-Item."""
-    logger.info("=== THÍ NGHIỆM 1: POPULARITY vs COSINE ===")
-    
-    # 1. Baseline
-    pop_model = PopularityRecommender(min_ratings=10)
-    pop_model.fit(train_df, movies_df)
-    pop_metrics = evaluate_recommender(pop_model, train_df, test_df, k=10)
-
-    # 2. Cosine (Raw)
-    cosine_raw = CosineItemItemRecommender(min_movie_ratings=5, normalize_mean_centered=False)
-    cosine_raw.fit(train_df, movies_df)
-    cos_raw_metrics = evaluate_recommender(cosine_raw, train_df, test_df, k=10)
-
-    # Vẽ biểu đồ so sánh
-    metrics_to_plot = ["HitRate@10", "Precision@10", "Recall@10", "Coverage"]
-    pop_vals = [pop_metrics[m] for m in metrics_to_plot]
-    cos_vals = [cos_raw_metrics[m] for m in metrics_to_plot]
-
-    x = np.arange(len(metrics_to_plot))
-    width = 0.35
-
-    plt.figure(figsize=(8, 5))
-    plt.bar(x - width/2, pop_vals, width, label="Popularity Baseline", color="#457b9d")
-    plt.bar(x + width/2, cos_vals, width, label="Cosine Item-Item (Raw)", color="#2a9d8f")
-    plt.xticks(x, metrics_to_plot, fontsize=10)
-    plt.ylabel("Giá trị Metric", fontsize=11)
-    plt.title("Thí nghiệm 1: So sánh Mô hình Phổ biến vs Cosine Similarity (K=10)", fontsize=12, fontweight="bold", pad=12)
-    plt.legend(frameon=True)
-    for i, v in enumerate(pop_vals):
-        plt.text(i - width/2, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
-    for i, v in enumerate(cos_vals):
-        plt.text(i + width/2, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
-    plt.tight_layout()
-    plt.savefig(os.path.join(FIGURES_DIR, "exp1_baseline_vs_cosine.png"))
-    plt.close()
-
-    return {"popularity": pop_metrics, "cosine_raw": cos_raw_metrics}
-
-
-def run_experiment_2(
-    train_df: pd.DataFrame, 
-    test_df: pd.DataFrame, 
-    movies_df: pd.DataFrame,
-    cos_raw_metrics: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Thí nghiệm 2: So sánh Cosine ma trận thô vs Ma trận đã trừ trung bình người dùng (Mean-centered)."""
-    logger.info("=== THÍ NGHIỆM 2: RAW COSINE vs MEAN-CENTERED COSINE ===")
-    
-    cosine_centered = CosineItemItemRecommender(min_movie_ratings=5, normalize_mean_centered=True)
-    cosine_centered.fit(train_df, movies_df)
-    cos_centered_metrics = evaluate_recommender(cosine_centered, train_df, test_df, k=10)
-
-    # Vẽ biểu đồ so sánh
-    metrics_to_plot = ["HitRate@10", "Precision@10", "Recall@10", "Coverage"]
-    raw_vals = [cos_raw_metrics[m] for m in metrics_to_plot]
-    cen_vals = [cos_centered_metrics[m] for m in metrics_to_plot]
-
-    x = np.arange(len(metrics_to_plot))
-    width = 0.35
-
-    plt.figure(figsize=(8, 5))
-    plt.bar(x - width/2, raw_vals, width, label="Cosine Thô (Raw)", color="#f4a261")
-    plt.bar(x + width/2, cen_vals, width, label="Cosine Trừ Trung Bình (Adjusted)", color="#e76f51")
-    plt.xticks(x, metrics_to_plot, fontsize=10)
-    plt.ylabel("Giá trị Metric", fontsize=11)
-    plt.title("Thí nghiệm 2: Hiệu quả của việc Khử thiên vị người dùng (Mean-centering)", fontsize=12, fontweight="bold", pad=12)
-    plt.legend(frameon=True)
-    for i, v in enumerate(raw_vals):
-        plt.text(i - width/2, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
-    for i, v in enumerate(cen_vals):
-        plt.text(i + width/2, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
-    plt.tight_layout()
-    plt.savefig(os.path.join(FIGURES_DIR, "exp2_raw_vs_mean_centered.png"))
-    plt.close()
-
-    return {"cosine_raw": cos_raw_metrics, "cosine_centered": cos_centered_metrics, "model": cosine_centered}
-
-
-def run_experiment_3(train_df: pd.DataFrame, val_df: pd.DataFrame, movies_df: pd.DataFrame) -> Dict[str, Any]:
-    """Thí nghiệm 3: Khảo sát siêu tham số K (5, 10, 20) và min_movie_ratings (1, 5, 10) trên tập Validation."""
-    logger.info("=== THÍ NGHIỆM 3: KHẢO SÁT K VÀ MIN_RATINGS ===")
-    
-    k_list = [5, 10, 20]
-    min_ratings_list = [1, 5, 10]
-    results = []
-
-    for min_r in min_ratings_list:
-        model = CosineItemItemRecommender(min_movie_ratings=min_r, normalize_mean_centered=True)
-        model.fit(train_df, movies_df)
-        
-        for k_val in k_list:
-            m = evaluate_recommender(model, train_df, val_df, k=k_val, max_test_users=100)
-            results.append({
-                "min_ratings": min_r,
-                "k": k_val,
-                "HitRate": m[f"HitRate@{k_val}"],
-                "Precision": m[f"Precision@{k_val}"],
-                "Recall": m[f"Recall@{k_val}"],
-                "Coverage": m["Coverage"]
-            })
-
-    res_df = pd.DataFrame(results)
-    logger.info(f"Kết quả khảo sát:\n{res_df}")
-
-    # Vẽ biểu đồ heatmap / line chart
-    plt.figure(figsize=(10, 4.5))
-    
-    plt.subplot(1, 2, 1)
-    for min_r in min_ratings_list:
-        sub = res_df[res_df["min_ratings"] == min_r]
-        plt.plot(sub["k"], sub["Precision"], marker="o", label=f"min_ratings={min_r}")
-    plt.title("Biến thiên Precision theo K", fontweight="bold")
-    plt.xlabel("Top-K Gợi ý")
-    plt.ylabel("Precision@K")
-    plt.legend()
-
-    plt.subplot(1, 2, 2)
-    for min_r in min_ratings_list:
-        sub = res_df[res_df["min_ratings"] == min_r]
-        plt.plot(sub["k"], sub["Coverage"], marker="s", label=f"min_ratings={min_r}")
-    plt.title("Độ phủ (Coverage) theo K", fontweight="bold")
-    plt.xlabel("Top-K Gợi ý")
-    plt.ylabel("Catalog Coverage")
-    plt.legend()
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(FIGURES_DIR, "exp3_k_and_min_ratings.png"))
-    plt.close()
-
-    return {"grid_search": results}
-
-
-def run_experiment_4(model: CosineItemItemRecommender, train_df: pd.DataFrame, movies_df: pd.DataFrame) -> List[Dict[str, Any]]:
-    """Thí nghiệm 4: Phân tích ít nhất 10 ca truy vấn thất bại, thiếu dữ liệu hoặc thiếu đa dạng."""
-    logger.info("=== THÍ NGHIỆM 4: PHÂN TÍCH 10 CA TRUY VẤN THẤT BẠI / NGOẠI BIÊN ===")
-    
-    # Lấy các trường hợp đặc biệt:
-    # 1. Phim rất ít rating (Cold-start)
-    # 2. Phim bom tấn quá phổ biến (Popularity bias)
-    # 3. Phim thể loại độc lạ / đa thể loại
-    # 4. Phim hoàn toàn không có trong ma trận
-    
-    test_cases = [
-        # (movieId, Loai_ca, Ly_do_phan_tich)
-        (1, "Bom tấn", "Toy Story (1995) - Rất nhiều rating, kiểm tra xem có bị chiếm bởi các phim bom tấn khác không"),
-        (260, "Phim kinh điển", "Star Wars: Episode IV - A New Hope (1995) - Thử độ đa dạng thể loại Sci-Fi"),
-        (356, "Phim đại chúng", "Forrest Gump (1994) - Kiểm tra độ tương đồng có thiên lệch sang phim drama/phổ biến"),
-        (8844, "Ít tương tác", "Jumanji (phần tiếp theo hoặc phim ít rating)"),
-        (193581, "Cold-start cực hạn", "Black Butler: Book of the Atlantic (2017) - Chỉ có 1 rating"),
-        (999999, "Out-of-vocabulary (OOV)", "Phim không hề tồn tại trong cơ sở dữ liệu"),
-        (47, "Phim hình sự giật gân", "Seven (Se7en) (1995) - Kiểm tra xem gợi ý có giữ được đúng tone đen tối"),
-        (296, "Tác phẩm độc đáo", "Pulp Fiction (1994) - Phim có sự pha trộn giữa Crime, Comedy"),
-        (117176, "Phim hoạt hình hiện đại", "Big Hero 6 (2014)"),
-        (858, "Kinh điển Crime/Drama", "The Godfather (1972) - Kiểm tra phim tiếp nối có gợi ý The Godfather Part II không")
-    ]
-
-    analysis_results = []
-    for m_id, case_type, note in test_cases:
-        movie_title = movies_df[movies_df["movieId"] == m_id]["title"].values
-        title = movie_title[0] if len(movie_title) > 0 else "Unknown / Not found"
-        
-        res = model.recommend(m_id, top_k=5)
-        recs = res.get("recommendations", [])
-        
+def analyze_failure_cases(model, movies_df):
+    """Audit real failures; never label a successful query as a failure."""
+    from collections import Counter
+    metadata = movies_df.set_index("movieId").to_dict(orient="index")
+    cases = []
+    indexed = sorted(model.builder.movie2idx)
+    cold = sorted(set(metadata) - set(indexed))
+    # Indexed cases are examined first to include diversity/weak-signal failures.
+    for movie_id in indexed + cold:
+        result = model.recommend(movie_id, top_k=5)
+        recs = result.get("recommendations", [])
         issues = []
-        if res.get("status") == "warning":
-            issues.append("Cảnh báo thiếu dữ liệu hoặc không tìm thấy.")
-        elif len(recs) == 0:
-            issues.append("Không tìm được phim tương đồng nào (similarity = 0).")
+        genre_fraction = 0.0
+        if result["status"] == "warning":
+            issues.append("Không đủ rating train để tạo vector (cold-start).")
+        elif not recs:
+            issues.append("Không có phim với cosine dương.")
         else:
-            # Kiểm tra độ đa dạng thể loại
-            rec_genres = [r["genres"] for r in recs]
-            if len(set(rec_genres)) <= 1:
-                issues.append("Thiếu đa dạng thể loại (tất cả phim gợi ý đều cùng một nhóm thể loại).")
-            # Kiểm tra điểm tương đồng quá thấp
+            counts = Counter(g for r in recs for g in r["genres"].split("|") if g != "(no genres listed)")
+            genre_fraction = max(counts.values(), default=0) / len(recs)
+            if genre_fraction >= 0.8:
+                issues.append("Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp.")
             if recs[0]["similarity_score"] < 0.2:
-                issues.append("Điểm tương đồng thấp (< 0.2), liên kết yếu.")
-
-        analysis_results.append({
-            "movieId": m_id,
-            "title": title,
-            "case_type": case_type,
-            "note": note,
-            "status": res.get("status"),
-            "warning": res.get("warning"),
-            "num_recommendations": len(recs),
-            "top_1_sim": recs[0]["title"] if recs else "None",
-            "top_1_score": recs[0]["similarity_score"] if recs else 0.0,
-            "identified_issues": issues if issues else ["Gợi ý tốt, tương đồng cao."]
-        })
-
+                issues.append("Cosine cao nhất dưới 0.2; tín hiệu tương đồng yếu.")
+            if len(recs) < 5:
+                issues.append("Không đủ 5 gợi ý với cosine dương.")
+        if not issues:
+            continue
+        cases.append({"movieId": int(movie_id), "title": metadata[movie_id]["title"], "case_type": "Cold-start" if result["status"] == "warning" else "Tín hiệu yếu / thiếu đa dạng", "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.", "status": result["status"], "warning": result.get("warning"), "num_recommendations": len(recs), "top_1_sim": recs[0]["title"] if recs else "None", "top_1_score": recs[0]["similarity_score"] if recs else 0.0, "dominant_genre_fraction": genre_fraction, "identified_issues": issues, "recommendations": recs, "suggested_action": "Thu thập thêm tương tác / hiển thị cảnh báo" if not recs else "Cân nhắc reranking đa dạng và kiểm tra thủ công"})
+        # Reserve three slots for real cold-start examples, when available.
+        if len(cases) >= (7 if movie_id in model.builder.movie2idx and cold else 10):
+            if movie_id in model.builder.movie2idx and cold:
+                break
+            if len(cases) >= 10:
+                break
+    if cold and len(cases) < 10:
+        for movie_id in cold[:10 - len(cases)]:
+            result = model.recommend(movie_id, top_k=5)
+            cases.append({"movieId": int(movie_id), "title": metadata[movie_id]["title"], "case_type": "Cold-start", "note": "Phim thật trong catalog, thiếu rating train.", "status": "warning", "warning": result["warning"], "num_recommendations": 0, "top_1_sim": "None", "top_1_score": 0.0, "identified_issues": [result["warning"]], "recommendations": [], "suggested_action": "Thu thập thêm rating; chưa phục vụ gợi ý."})
+    if len(cases) < 10:
+        raise ValueError("Fewer than ten genuine failure/diversity cases; expand the documented audit")
     with open(os.path.join(FIGURES_DIR, "exp4_failure_analysis.json"), "w", encoding="utf-8") as f:
-        json.dump(analysis_results, f, ensure_ascii=False, indent=2)
-
-    logger.info(f"Đã hoàn thành phân tích {len(analysis_results)} ca và lưu vào reports/figures/exp4_failure_analysis.json")
-    return analysis_results
+        json.dump(cases[:10], f, ensure_ascii=False, indent=2)
+    return cases[:10]
 
 
-def create_model_card(best_model: CosineItemItemRecommender, exp1_res, exp2_res, exp3_res):
-    """Tạo Model Card chuẩn mực khoa học lưu vào models/model_card.json."""
-    model_card = {
-        "model_name": "MovieLens Item-Item Cosine Recommender",
-        "version": "1.0.0",
-        "author": "Nhóm 02 sinh viên (Lớp 12523W.1)",
-        "intended_use": {
-            "primary_task": "Item-to-item movie recommendation based on user interaction vectors",
-            "intended_users": "Nền tảng xem phim, phục vụ người dùng tìm phim tương tự",
-            "out_of_scope": "Dự đoán điểm số chính xác (Rating regression), hồ sơ người dùng nhạy cảm"
-        },
-        "training_data": {
-            "dataset": "MovieLens latest-small (GroupLens)",
-            "num_ratings_train": int(best_model.metadata.get("n_entries", 0)),
-            "num_movies_indexed": int(best_model.metadata.get("n_movies", 0)),
-            "num_users_indexed": int(best_model.metadata.get("n_users", 0)),
-            "sparsity": f"{best_model.metadata.get('sparsity', 0.0)*100:.2f}%"
-        },
-        "technical_specifications": {
-            "algorithm": "Adjusted Cosine Similarity (Item-Item Collaborative Filtering)",
-            "mean_centering": True,
-            "min_movie_ratings": best_model.min_movie_ratings,
-            "similarity_metric": "Cosine (Row-normalized dot product)"
-        },
-        "evaluation_summary": {
-            "exp1_vs_baseline": exp1_res,
-            "exp2_mean_centering_gain": exp2_res["cosine_centered"],
-            "leakage_prevention": "Per-user temporal split, zero test interactions included in feature matrix"
-        },
-        "limitations": [
-            "Cold-start: Không thể gợi ý chính xác cho phim mới chưa có đánh giá hoặc ít hơn 5 đánh giá.",
-            "Long-tail bias: Phim ít người xem thường có ít tương đồng chất lượng so với phim phổ biến.",
-            "Sở thích tĩnh: Chưa tính đến sự thay đổi gu xem phim theo thời gian thực."
-        ],
-        "ethical_considerations": "Không suy diễn thông tin nhân khẩu học hay sở thích riêng tư. Minh bạch điểm tương đồng và lý do gợi ý."
-    }
-
-    card_path = os.path.join(MODELS_DIR, "model_card.json")
-    with open(card_path, "w", encoding="utf-8") as f:
-        json.dump(model_card, f, ensure_ascii=False, indent=2)
-    logger.info(f"Đã lưu Model Card vào {card_path}")
+def select_candidate(rows):
+    # Freeze the rule before touching test: Precision@K, then coverage;
+    # prefer smaller K and simpler raw representation on exact ties.
+    return max(rows, key=lambda r: (r["metrics"][f"Precision@{r['k']}"], r["metrics"]["Coverage"], -r["k"], not r["mean_centered"], -r["min_ratings"]))
 
 
 def main():
-    logger.info("BẮT ĐẦU TOÀN BỘ QUY TRÌNH HUẤN LUYỆN VÀ THÍ NGHIỆM...")
-    
-    # 1. Tải và xử lý dữ liệu
+    import argparse
+    import platform
+    import hashlib
+    from pathlib import Path
+    from datetime import datetime, timezone
+    from importlib.metadata import version
+    parser = argparse.ArgumentParser(description="Validation selection followed by one frozen final-test run")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--development", action="store_true", help="Validation only; no final-test access or serving artifact changes")
+    args = parser.parse_args()
+    results_path = Path("reports/experiment_results.json")
+    if results_path.exists() and not args.development:
+        raise SystemExit("Final test already frozen. Use --development for further validation work; inspect test with python -m src.evaluate --split test.")
     dataset_path = download_and_extract_data()
     ratings_df, movies_df = load_raw_data(dataset_path)
-    inspect_data_quality(ratings_df, movies_df)
-    
-    # Biểu đồ EDA
-    plot_eda(ratings_df, movies_df)
-    
-    # Split chống rò rỉ
-    train_df, val_df, test_df = split_train_val_test(ratings_df, test_ratio=0.2, val_ratio=0.1, random_state=42)
+    ratings_df, movies_df = clean_and_document(ratings_df, movies_df, dataset_path)
+    train_df, val_df, test_df = split_train_val_test(ratings_df, random_state=args.seed)
     save_processed_data(train_df, val_df, test_df, movies_df)
-    
-    # 2. Bốn thí nghiệm bắt buộc
-    exp1_res = run_experiment_1(train_df, test_df, movies_df)
-    exp2_res = run_experiment_2(train_df, test_df, movies_df, exp1_res["cosine_raw"])
-    exp3_res = run_experiment_3(train_df, val_df, movies_df)
-    
-    # Chọn mô hình tốt nhất (Cosine Mean-centered, min_ratings=5)
-    best_model = exp2_res["model"]
-    
-    # Phân tích 10 ca lỗi
-    run_experiment_4(best_model, train_df, movies_df)
-    
-    # 3. Lưu Model Card & Model Artifact để Serving Web
-    best_model.save(os.path.join(MODELS_DIR, "cosine_recommender.pkl"))
-    create_model_card(best_model, exp1_res, exp2_res, exp3_res)
-    
-    logger.info("TẤT CẢ 4 THÍ NGHIỆM ĐÃ HOÀN TẤT VÀ ARTIFACTS ĐÃ ĐƯỢC LƯU SẴN SÀNG!")
+    plot_eda(train_df, movies_df)
+    baseline = PopularityRecommender()
+    baseline.fit(train_df, movies_df)
+    baseline_val = evaluate_recommender(baseline, train_df, val_df, k=10, random_state=args.seed)
+    rows, candidates = [], {}
+    for centered in (False, True):
+        for minimum in (1, 5, 10):
+            candidate = CosineItemItemRecommender(minimum, centered)
+            candidate.fit(train_df, movies_df)
+            for k in (5, 10, 20):
+                metrics = evaluate_recommender(candidate, train_df, val_df, k=k, random_state=args.seed)
+                rows.append({"mean_centered": centered, "min_ratings": minimum, "k": k, "metrics": metrics})
+            # Only retain the two validation-selected representations, not six dense matrices.
+            best_variant = select_candidate([r for r in rows if r["mean_centered"] == centered])
+            if best_variant["min_ratings"] == minimum:
+                candidates[centered] = candidate
+    selected = select_candidate(rows)
+    model = candidates[selected["mean_centered"]]
+    raw_row = select_candidate([r for r in rows if not r["mean_centered"]])
+    centered_row = select_candidate([r for r in rows if r["mean_centered"]])
+    # Controlled ablation plots share the same threshold/K and validation cohort.
+    controlled = {r["mean_centered"]: r["metrics"] for r in rows if r["min_ratings"] == 5 and r["k"] == 10}
+    for filename, entries in [("exp1_baseline_vs_cosine.png", {"Count popularity": baseline_val, "Raw cosine": controlled[False]}), ("exp2_raw_vs_mean_centered.png", {"Raw": controlled[False], "Mean-centered": controlled[True]})]:
+        labels = ["HitRate@10", "Precision@10", "Recall@10", "Coverage"]
+        pd.DataFrame({name: [metric[label] for label in labels] for name, metric in entries.items()}, index=labels).plot.bar(title="Validation (train-only features)", figsize=(9, 5))
+        plt.tight_layout()
+        plt.savefig(os.path.join(FIGURES_DIR, filename))
+        plt.close()
+    grid_df = pd.DataFrame([{**{k: r[k] for k in ("mean_centered", "min_ratings", "k")}, "Precision": r["metrics"][f"Precision@{r['k']}"], "Coverage": r["metrics"]["Coverage"]} for r in rows])
+    grid_df.to_csv("reports/validation_grid.csv", index=False)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    for centered, axis in zip((False, True), axes):
+        sub = grid_df[grid_df.mean_centered == centered]
+        sns.heatmap(sub.pivot(index="min_ratings", columns="k", values="Precision"), annot=True, fmt=".4f", ax=axis)
+        axis.set_title("Validation Precision: " + ("Mean-centered" if centered else "Raw"))
+    plt.tight_layout()
+    plt.savefig(os.path.join(FIGURES_DIR, "exp3_k_and_min_ratings.png"))
+    plt.close()
+    if args.development:
+        Path("reports/development_validation.json").write_text(json.dumps({"grid": rows, "selected": selected}, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info("Validation-only development complete; final test was not evaluated.")
+        return
+    config = {"seed": args.seed, "split": {"strategy": "per-user temporal; timestamp then movieId; ties may cross split boundaries", "train": 0.7, "validation": 0.1, "test": 0.2, "randomized": False}, "selection_rule": "Validation Precision@K, coverage, smaller K, raw, smaller min_ratings", "selected": {k: selected[k] for k in ("mean_centered", "min_ratings", "k")}, "evaluation": {"positive_threshold": 3.5, "max_users": None, "unit": "user"}, "python": platform.python_version(), "packages": {p: version(p) for p in ("numpy", "pandas", "scipy", "scikit-learn", "fastapi", "pydantic", "matplotlib", "seaborn")}}
+    # Persist selection and artifact BEFORE any final-test metrics exist.
+    model.save(os.path.join(MODELS_DIR, "cosine_recommender.pkl"))
+    config["artifact_sha256"] = hashlib.sha256(Path(MODELS_DIR, "cosine_recommender.pkl").read_bytes()).hexdigest()
+    Path(MODELS_DIR, "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+    checkpoint = {"status": "test_started", "config": config, "validation": {"baseline_at_10": baseline_val, "grid": rows}, "test": {}}
+    results_path.write_text(json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8")
+    test_results = {"popularity": evaluate_recommender(baseline, train_df, test_df, k=10, random_state=args.seed), "cosine_raw": evaluate_recommender(candidates[False], train_df, test_df, k=10, random_state=args.seed), "cosine_centered": evaluate_recommender(candidates[True], train_df, test_df, k=10, random_state=args.seed)}
+    selected_name = "cosine_centered" if selected["mean_centered"] else "cosine_raw"
+    final_metrics = test_results[selected_name] if selected["k"] == 10 else evaluate_recommender(model, train_df, test_df, k=selected["k"], random_state=args.seed)
+    test_results["selected"] = final_metrics
+    checkpoint.update({"status": "complete", "completed_at_utc": datetime.now(timezone.utc).isoformat(), "test": test_results, "test_comparison": {"k": 10, "raw_min_ratings": raw_row["min_ratings"], "centered_min_ratings": centered_row["min_ratings"], "note": "Thresholds selected independently on validation; controlled ablation is in validation plots."}})
+    results_path.write_text(json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8")
+    analyze_failure_cases(model, movies_df)
+    card = {"model_name": "MovieLens Item-Item Cosine Recommender", "version": "2.0.0", "intended_use": {"primary_task": "Item-to-item retrieval; evaluation aggregates five training seeds per user", "out_of_scope": "Rating prediction; sensitive preference inference; causal claims"}, "training_data": {"dataset": "MovieLens latest-small (GroupLens)", "num_ratings_train": len(train_df), "num_movies_indexed": model.metadata["n_movies"], "num_users_indexed": model.metadata["n_users"], "sparsity": model.metadata["sparsity"]}, "technical_specifications": config["selected"], "evaluation_summary": {"validation": checkpoint["validation"], "test": test_results, "selected_model": selected_name, "selection_rule": config["selection_rule"]}, "limitations": [f"Cold-start: fewer than {model.min_movie_ratings} train ratings cannot be served.", "Long-tail and popularity bias; historical preferences may drift.", "Only positive cosine scores are served; unknown release years are excluded when filtering by year.", "Per-user temporal split does not enforce one global prediction date.", "Bootstrap intervals describe user variability; no multiple-seed claims for deterministic splitting."], "ethical_considerations": "Historical recommendations are not absolute movie quality; do not infer sensitive traits.", "reproducibility": {"config": "models/config.json", "data_manifest": "data/processed/data_manifest.json", "results": "reports/experiment_results.json"}}
+    Path(MODELS_DIR, "model_card.json").write_text(json.dumps(card, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("Final artifacts and independent test results frozen.")
 
 
 if __name__ == "__main__":

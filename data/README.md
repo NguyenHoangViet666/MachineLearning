@@ -44,3 +44,17 @@
    * Ma trận User–Item và vector đặc trưng của mỗi bộ phim **CHỈ ĐƯỢC XÂY DỰNG TỪ TẬP TRAIN**.
    * Tập Test hoàn toàn độc lập và chỉ được dùng ở bước cuối cùng để đo lường độ chính xác Top-K (Precision@K, Hit-Rate@K) của danh sách gợi ý.
    * Tuyệt đối không tính toán Cosine Similarity trên toàn bộ dữ liệu trước khi split.
+
+## 5. Phiên bản và kiểm tra chất lượng có thể tái tạo
+
+`python -m src.data` sinh các hồ sơ trong `data/processed/`:
+
+- `data_manifest.json`: SHA-256 và kích thước từng tệp; thời điểm kiểm tra; ngày tải thực tế nếu script tải mới. Với dữ liệu đã có sẵn, ngày tải gốc được ghi là chưa biết, không suy đoán.
+- `quality_report.json`: số dòng, missing, khóa trùng, rating ngoài miền/bước 0.5, ID/timestamp không hợp lệ, liên kết movieId và phân bố rating trước/sau làm sạch.
+- `excluded_ratings.csv`: từng dòng bị loại và lý do; tệp chỉ có header nếu không có dòng bị loại.
+
+Các cột `movies.csv` có đơn vị: movieId là mã định danh, title/genres là văn bản. Metadata có sẵn khi phim được đưa vào catalog; chỉ phục vụ hiển thị/lọc, không dùng để học vector. Năm phát hành được trích từ `(YYYY)` cuối title; thiếu năm thì không được đưa vào kết quả khi bật bộ lọc năm. `tags.csv` và `links.csv` không được dùng để train.
+
+EDA chỉ dùng train. Số lượng rating để lọc phim và trung bình user đều tính từ train; trung bình user tính trước khi loại phim ít rating. Split theo user, timestamp rồi movieId để ổn định thứ tự khi timestamp trùng; đây không phải cutoff thời gian chung cho mọi user. Seed dùng cho bootstrap, không thay đổi split thời gian cố định.
+
+Dữ liệu nhỏ hiện đang được theo dõi trong Git. Không thêm phiên bản MovieLens lớn; có thể tái tạo bản small bằng script HTTPS và phải giữ README/điều khoản gốc. Hồ sơ download mới chứa checksum ZIP và thời điểm UTC; kiểm tra checksum để so sánh bản dữ liệu giữa các máy.

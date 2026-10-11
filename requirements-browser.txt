@@ -1,0 +1,2 @@
+# Optional browser verification; uses installed Chrome/Edge or Playwright Chromium.
+playwright==1.63.0

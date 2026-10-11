@@ -1,0 +1,107 @@
+[
+  {
+    "request": "GET /api/recommendations?movie_id=1&k=5",
+    "status_code": 200,
+    "response": {
+      "movie_id": 1,
+      "query_movie_title": "Toy Story (1995)",
+      "rating_count": 186,
+      "status": "success",
+      "warning": null,
+      "k": 5,
+      "filter_genre": null,
+      "filter_genres": [],
+      "genre_match_mode": "any",
+      "recommendations": [
+        {
+          "movieId": 780,
+          "title": "Independence Day (a.k.a. ID4) (1996)",
+          "genres": "Action|Adventure|Sci-Fi|Thriller",
+          "similarity_score": 0.5547,
+          "rating_count": 161,
+          "rating_mean": 3.49,
+          "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+        },
+        {
+          "movieId": 480,
+          "title": "Jurassic Park (1993)",
+          "genres": "Action|Adventure|Sci-Fi|Thriller",
+          "similarity_score": 0.5393,
+          "rating_count": 206,
+          "rating_mean": 3.76,
+          "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+        },
+        {
+          "movieId": 260,
+          "title": "Star Wars: Episode IV - A New Hope (1977)",
+          "genres": "Action|Adventure|Sci-Fi",
+          "similarity_score": 0.5273,
+          "rating_count": 220,
+          "rating_mean": 4.21,
+          "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+        },
+        {
+          "movieId": 3114,
+          "title": "Toy Story 2 (1999)",
+          "genres": "Adventure|Animation|Children|Comedy|Fantasy",
+          "similarity_score": 0.5261,
+          "rating_count": 82,
+          "rating_mean": 3.86,
+          "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure, Fantasy, Animation, Children, Comedy)."
+        },
+        {
+          "movieId": 1210,
+          "title": "Star Wars: Episode VI - Return of the Jedi (1983)",
+          "genres": "Action|Adventure|Sci-Fi",
+          "similarity_score": 0.5076,
+          "rating_count": 166,
+          "rating_mean": 4.22,
+          "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+        }
+      ]
+    }
+  },
+  {
+    "request": "GET /api/recommendations?movie_id=4&k=5",
+    "status_code": 200,
+    "response": {
+      "movie_id": 4,
+      "query_movie_title": "",
+      "rating_count": 4,
+      "status": "warning",
+      "warning": "Phim ID 4 có 4 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý.",
+      "k": 5,
+      "filter_genre": null,
+      "filter_genres": [],
+      "genre_match_mode": "any",
+      "recommendations": []
+    }
+  },
+  {
+    "request": "GET /api/recommendations?movie_id=1&k=0",
+    "status_code": 422,
+    "response": {
+      "detail": [
+        {
+          "type": "greater_than_equal",
+          "loc": [
+            "query",
+            "k"
+          ],
+          "msg": "Input should be greater than or equal to 1",
+          "input": "0",
+          "ctx": {
+            "ge": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "request": "GET /api/recommendations?movie_id=999999&k=5",
+    "status_code": 404,
+    "response": {
+      "detail": "Phim ID 999999 không tồn tại trong hệ thống."
+    }
+  }
+]

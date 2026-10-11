@@ -54,7 +54,7 @@ class InteractionMatrixBuilder:
         self.idx2user = {i: u_id for i, u_id in enumerate(unique_users)}
 
         # 3. Tính trung bình rating của từng người dùng trên tập train
-        self.user_means = filtered_df.groupby("userId")["rating"].mean().to_dict()
+        self.user_means = ratings_df.groupby("userId")["rating"].mean().to_dict()
 
         row_indices = filtered_df["movieId"].map(self.movie2idx).values
         col_indices = filtered_df["userId"].map(self.user2idx).values

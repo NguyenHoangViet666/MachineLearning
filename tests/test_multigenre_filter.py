@@ -75,38 +75,3 @@ def test_model_multigenre_filter():
     rec_ids_ex = [r["movieId"] for r in recs_ex]
     assert 3 not in rec_ids_ex and 4 not in rec_ids_ex, f"Found excluded Romance: {rec_ids_ex}"
     print(" [PASS] Exclude mode test passed:", rec_ids_ex)
-
-def test_api_endpoints():
-    print("\nTesting Live API Endpoints on http://127.0.0.1:8000 ...")
-    try:
-        # Check /api/genres
-        res = requests.get("http://127.0.0.1:8000/api/genres")
-        assert res.status_code == 200, f"Status: {res.status_code}"
-        data = res.json()
-        assert "genres" in data and len(data["genres"]) >= 18
-        print(f" [PASS] /api/genres returned {len(data['genres'])} genres.")
-
-        # Check /api/recommendations with multi-genres
-        res_rec = requests.get("http://127.0.0.1:8000/api/recommendations?movie_id=1&k=5&genres=Animation,Children&match_mode=all")
-        assert res_rec.status_code == 200
-        rec_data = res_rec.json()
-        assert len(rec_data["recommendations"]) > 0
-        for item in rec_data["recommendations"]:
-            assert "Animation" in item["genres"] and "Children" in item["genres"]
-        print(f" [PASS] /api/recommendations (all mode) returned {len(rec_data['recommendations'])} items matching all genres.")
-
-        # Check /api/movies with multi-genres
-        res_mov = requests.get("http://127.0.0.1:8000/api/movies?genres=Action,Sci-Fi&match_mode=all&limit=5")
-        assert res_mov.status_code == 200
-        mov_data = res_mov.json()
-        assert len(mov_data["movies"]) > 0
-        for m in mov_data["movies"]:
-            assert "Action" in m["genres"] and "Sci-Fi" in m["genres"]
-        print(f" [PASS] /api/movies returned {len(mov_data['movies'])} movies matching Action + Sci-Fi.")
-    except Exception as e:
-        print(f" [WARN/FAIL] API test encountered: {e}")
-
-if __name__ == "__main__":
-    test_model_multigenre_filter()
-    test_api_endpoints()
-    print("\nALL MULTI-GENRE TESTS COMPLETED SUCCESSFULLY!")

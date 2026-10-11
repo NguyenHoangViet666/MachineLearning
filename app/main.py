@@ -8,13 +8,14 @@ import os
 import sys
 import json
 import logging
-from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Query, HTTPException, Request
+from typing import Optional, List, Dict, Any, Literal
+from fastapi import FastAPI, Query, HTTPException, Request, Path
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 
 # Thêm project root vào sys.path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,10 +28,17 @@ from src.chatbot_engine import CineBotNLPEngine
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app):
+    load_assets()
+    yield
+
+
 app = FastAPI(
     title="MovieLens Movie Recommendation System API",
     description="Hệ thống gợi ý phim tương đồng sử dụng Vector và Cosine Similarity",
-    version="1.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS Middleware
@@ -99,19 +107,14 @@ def load_assets():
         logger.info("CineBot In-House NLP Engine đã sẵn sàng phục vụ.")
 
 
-@app.on_event("startup")
-def on_startup():
-    load_assets()
-
-
 # Pydantic Schemas
 class MovieRecommendationItem(BaseModel):
     movieId: int = Field(..., description="ID của bộ phim được gợi ý")
     title: str = Field(..., description="Tên phim")
     genres: str = Field(..., description="Các thể loại của phim")
-    similarity_score: float = Field(..., description="Điểm tương đồng Cosine [0, 1]")
-    rating_count: int = Field(..., description="Số lượt đánh giá trong tập train")
-    rating_mean: float = Field(..., description="Điểm rating trung bình")
+    similarity_score: float = Field(..., ge=0, le=1, description="Điểm cosine dương được phục vụ [0, 1]")
+    rating_count: int = Field(..., ge=0, description="Số lượt đánh giá trong tập train")
+    rating_mean: float = Field(..., ge=0.5, le=5, description="Điểm rating trung bình [0.5, 5]")
     reason: str = Field(..., description="Lý do gợi ý")
 
 
@@ -129,7 +132,7 @@ class RecommendationResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(..., description="Câu hỏi hoặc yêu cầu của người dùng")
+    message: str = Field(..., min_length=1, max_length=2000, description="Câu hỏi hoặc yêu cầu của người dùng")
     k: int = Field(5, ge=1, le=20, description="Số lượng phim gợi ý tối đa")
 
 
@@ -160,6 +163,16 @@ def parse_genres_param(
             if clean and clean.lower() != "all" and clean not in result:
                 result.append(clean)
     return result
+
+
+def validate_filters(genres, year_min, year_max):
+    if year_min is not None and year_max is not None and year_min > year_max:
+        raise HTTPException(422, "Năm bắt đầu phải nhỏ hơn hoặc bằng năm kết thúc.")
+    known = {g.lower(): g for g in GENRES_LIST}
+    invalid = [g for g in genres if g.lower() not in known]
+    if invalid:
+        raise HTTPException(422, f"Thể loại không hợp lệ: {', '.join(invalid)}")
+    return [known[g.lower()] for g in genres]
 
 
 # Endpoints
@@ -203,7 +216,9 @@ async def search_movies(
     query: Optional[str] = Query(None, description="Từ khóa tìm kiếm theo tên phim"),
     genre: Optional[str] = Query(None, description="Lọc theo thể loại (chuỗi đơn hoặc phân tách bởi dấu phẩy)"),
     genres: Optional[List[str]] = Query(None, description="Danh sách nhiều thể loại cần lọc"),
-    match_mode: str = Query("any", description="Chế độ kết hợp: 'any' (khớp 1 thể loại), 'all' (đủ tất cả), 'exclude' (loại trừ)"),
+    match_mode: Literal["any", "all", "exclude"] = Query("any"),
+    year_min: Optional[int] = Query(None, ge=1870, le=2100),
+    year_max: Optional[int] = Query(None, ge=1870, le=2100),
     limit: int = Query(24, ge=1, le=100)
 ):
     """Tìm kiếm phim hỗ trợ thanh tìm kiếm, autocomplete và kết hợp lọc nhiều thể loại (ANY / ALL / EXCLUDE)."""
@@ -211,11 +226,18 @@ async def search_movies(
         raise HTTPException(status_code=503, detail="Dữ liệu phim chưa sẵn sàng.")
     
     genres_list = parse_genres_param(genres=genres, genre=genre)
+    genres_list = validate_filters(genres_list, year_min, year_max)
     match_mode_clean = match_mode.lower() if match_mode in ("any", "all", "exclude") else "any"
 
     df = MOVIES_DF.copy()
     if query:
-        df = df[df["title"].str.contains(query, case=False, na=False)]
+        df = df[df["title"].str.contains(query, case=False, na=False, regex=False)]
+    if year_min is not None or year_max is not None:
+        years = df["title"].str.extract(r"\((\d{4})\)\s*$", expand=False).astype("Float64")
+        if year_min is not None:
+            df = df[years >= year_min]
+        if year_max is not None:
+            df = df[years.loc[df.index] <= year_max]
     
     if genres_list:
         genres_lower = [g.lower() for g in genres_list]
@@ -251,7 +273,7 @@ async def search_movies(
 
 
 @app.get("/api/movies/{movie_id}")
-async def get_movie_detail(movie_id: int):
+async def get_movie_detail(movie_id: int = Path(..., ge=1)):
     """Lấy chi tiết một bộ phim theo ID."""
     if MOVIES_DF is None:
         raise HTTPException(status_code=503, detail="Dữ liệu phim chưa sẵn sàng.")
@@ -275,11 +297,13 @@ async def get_movie_detail(movie_id: int):
 
 @app.get("/api/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
-    movie_id: int = Query(..., description="ID của bộ phim người dùng đang quan tâm"),
+    movie_id: int = Query(..., ge=1, description="ID của bộ phim người dùng đang quan tâm"),
     k: int = Query(10, ge=1, le=50, description="Số lượng phim tương tự cần gợi ý"),
     genre: Optional[str] = Query(None, description="Bộ lọc thể loại tùy chọn (chuỗi đơn hoặc phân tách bởi dấu phẩy)"),
     genres: Optional[List[str]] = Query(None, description="Danh sách nhiều thể loại cần kết hợp lọc"),
-    match_mode: str = Query("any", description="Chế độ kết hợp: 'any' (khớp 1 thể loại), 'all' (đủ tất cả), 'exclude' (loại trừ)")
+    match_mode: Literal["any", "all", "exclude"] = Query("any"),
+    year_min: Optional[int] = Query(None, ge=1870, le=2100),
+    year_max: Optional[int] = Query(None, ge=1870, le=2100)
 ):
     """
     API chính: Gợi ý Top-K phim tương tự dựa trên Cosine Similarity.
@@ -288,9 +312,7 @@ async def get_recommendations(
     """
     global MODEL
     if MODEL is None:
-        load_assets()
-        if MODEL is None:
-            raise HTTPException(status_code=503, detail="Mô hình gợi ý chưa được huấn luyện hoặc nạp.")
+        raise HTTPException(status_code=503, detail="Mô hình gợi ý chưa được huấn luyện hoặc nạp.")
 
     if MOVIES_DF is not None:
         exists = len(MOVIES_DF[MOVIES_DF["movieId"] == movie_id]) > 0
@@ -298,13 +320,16 @@ async def get_recommendations(
             raise HTTPException(status_code=404, detail=f"Phim ID {movie_id} không tồn tại trong hệ thống.")
 
     genres_list = parse_genres_param(genres=genres, genre=genre)
+    genres_list = validate_filters(genres_list, year_min, year_max)
     match_mode_clean = match_mode.lower() if match_mode in ("any", "all", "exclude") else "any"
 
     result = MODEL.recommend(
         movie_id=movie_id, 
         top_k=k, 
         filter_genres=genres_list, 
-        genre_match_mode=match_mode_clean
+        genre_match_mode=match_mode_clean,
+        year_min=year_min,
+        year_max=year_max
     )
     
     return {
@@ -312,7 +337,7 @@ async def get_recommendations(
         "query_movie_title": result.get("query_movie_title", ""),
         "rating_count": result.get("rating_count", 0),
         "status": result.get("status", "success"),
-        "warning": result.get("warning"),
+        "warning": result.get("warning") or result.get("message"),
         "k": k,
         "filter_genre": result.get("filter_genre"),
         "filter_genres": result.get("filter_genres", genres_list),
@@ -352,10 +377,10 @@ async def chat_with_bot(payload: ChatRequest):
     Hoàn toàn offline, không gọi API bên thứ ba.
     """
     global CHATBOT, MODEL
+    if not payload.message.strip():
+        raise HTTPException(422, "Vui lòng nhập nội dung tin nhắn.")
     if CHATBOT is None:
-        load_assets()
-        if CHATBOT is None:
-            raise HTTPException(status_code=503, detail="CineBot NLP Engine chưa sẵn sàng.")
+        raise HTTPException(status_code=503, detail="CineBot NLP Engine chưa sẵn sàng.")
 
     result = CHATBOT.process_message(
         message=payload.message,

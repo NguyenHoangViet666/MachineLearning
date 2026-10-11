@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class PopularityRecommender:
     """
-    Baseline Model: Gợi ý các bộ phim phổ biến nhất (nhiều lượt đánh giá & điểm cao nhất)
+    Baseline Model: Gợi ý phim theo số lượt đánh giá train giảm dần.
     từ tập Train. Không phụ thuộc vào nội dung hay tương tác cá nhân hóa.
     """
     def __init__(self, min_ratings: int = 10):
@@ -43,16 +43,9 @@ class PopularityRecommender:
             rating_mean=("rating", "mean")
         ).reset_index()
 
-        # Áp dụng công thức weighted rating (IMDb / Bayesian damping)
-        # WR = (v / (v + m)) * R + (m / (v + m)) * C
-        # Trong đó: v = rating_count, m = min_ratings, R = rating_mean, C = mean rating của toàn tập
-        C = train_ratings["rating"].mean()
-        m = self.min_ratings
-        
-        stats["score"] = (stats["rating_count"] / (stats["rating_count"] + m)) * stats["rating_mean"] + \
-                         (m / (stats["rating_count"] + m)) * C
-        
-        stats = stats.sort_values(by="score", ascending=False)
+        # Required baseline: popularity is the number of training interactions.
+        stats["score"] = stats["rating_count"].astype(float)
+        stats = stats.sort_values(["rating_count", "movieId"], ascending=[False, True])
         stats = stats.merge(movies_df, on="movieId", how="left")
         
         self.popular_movies = stats.to_dict(orient="records")
@@ -71,7 +64,7 @@ class PopularityRecommender:
                 "score": float(item["score"]),
                 "rating_count": int(item["rating_count"]),
                 "rating_mean": float(item["rating_mean"]),
-                "reason": "Top phim phổ biến và được đánh giá cao nhất trên hệ thống."
+                "reason": "Phim có nhiều lượt đánh giá nhất trong tập train."
             })
             if len(recs) >= top_k:
                 break
@@ -99,6 +92,7 @@ class CosineItemItemRecommender:
     def fit(self, train_ratings: pd.DataFrame, movies_df: pd.DataFrame):
         """Huấn luyện mô hình: tạo ma trận và tính toán ma trận Cosine Similarity."""
         self.movies_df = movies_df.copy()
+        self.movie_metadata = movies_df.set_index("movieId").to_dict(orient="index")
         
         # Lưu thống kê số lượng đánh giá của từng phim trên tập train
         counts = train_ratings.groupby("movieId").agg(
@@ -133,7 +127,9 @@ class CosineItemItemRecommender:
         top_k: int = 10, 
         filter_genre: Optional[str] = None,
         filter_genres: Optional[List[str]] = None,
-        genre_match_mode: str = "any"
+        genre_match_mode: str = "any",
+        year_min: Optional[int] = None,
+        year_max: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Gợi ý Top-K phim tương đồng với movie_id chỉ định.
@@ -143,12 +139,20 @@ class CosineItemItemRecommender:
         - 'all': Khớp đầy đủ tất cả thể loại (AND)
         - 'exclude': Loại trừ phim chứa các thể loại này (NOT)
         """
+        if top_k < 1 or top_k > 1000:
+            raise ValueError("top_k must be between 1 and 1000")
+        if genre_match_mode not in ("any", "all", "exclude"):
+            raise ValueError("Invalid genre_match_mode")
+        if year_min is not None and year_max is not None and year_min > year_max:
+            raise ValueError("year_min must not exceed year_max")
         if movie_id not in self.builder.movie2idx:
             # Trường hợp phim không có trong train hoặc bị loại do quá ít rating (< min_ratings)
             count = self.movie_stats.get(movie_id, {}).get("rating_count", 0)
             return {
                 "movie_id": movie_id,
                 "status": "warning",
+                "rating_count": int(count),
+                "warning": f"Phim ID {movie_id} có {count} lượt đánh giá train, dưới ngưỡng {self.min_movie_ratings}; không đủ dữ liệu gợi ý.",
                 "message": f"Phim ID {movie_id} chỉ có {count} lượt đánh giá trong tập train (ngưỡng tối thiểu là {self.min_movie_ratings}). Không đủ dữ liệu để tính tương đồng.",
                 "recommendations": []
             }
@@ -178,9 +182,11 @@ class CosineItemItemRecommender:
         # Lấy các chỉ số có điểm cao nhất
         ranked_indices = np.argsort(scores)[::-1]
         
-        query_movie_row = self.movies_df[self.movies_df["movieId"] == movie_id]
-        query_title = query_movie_row["title"].values[0] if len(query_movie_row) > 0 else f"Phim {movie_id}"
-        query_genres = set(query_movie_row["genres"].values[0].split("|")) if len(query_movie_row) > 0 else set()
+        if not hasattr(self, "movie_metadata"):
+            self.movie_metadata = self.movies_df.set_index("movieId").to_dict(orient="index")
+        query_meta = self.movie_metadata.get(movie_id, {})
+        query_title = query_meta.get("title", f"Phim {movie_id}")
+        query_genres = set(query_meta.get("genres", "").split("|"))
         
         query_rating_count = self.movie_stats.get(movie_id, {}).get("rating_count", 0)
         warning = None
@@ -194,12 +200,22 @@ class CosineItemItemRecommender:
                 break
                 
             sim_movie_id = self.builder.idx2movie[idx]
-            movie_meta = self.movies_df[self.movies_df["movieId"] == sim_movie_id]
-            if len(movie_meta) == 0:
+            movie_meta = self.movie_metadata.get(sim_movie_id)
+            if movie_meta is None:
                 continue
                 
-            m_title = movie_meta["title"].values[0]
-            m_genres = movie_meta["genres"].values[0]
+            m_title = movie_meta["title"]
+            if year_min is not None or year_max is not None:
+                import re
+                match = re.search(r"\((\d{4})\)\s*$", m_title)
+                if not match:
+                    continue
+                year = int(match.group(1))
+                if year_min is not None and year < year_min:
+                    continue
+                if year_max is not None and year > year_max:
+                    continue
+            m_genres = movie_meta["genres"]
             m_genres_set = set(m_genres.split("|")) if isinstance(m_genres, str) else set()
             m_genres_lower = {g.strip().lower() for g in m_genres_set}
             

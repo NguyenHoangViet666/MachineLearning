@@ -1,0 +1,86 @@
+{
+  "before": {
+    "n_ratings": 100836,
+    "n_users": 610,
+    "n_movies_rated": 9724,
+    "n_total_movies": 9742,
+    "rating_min": 0.5,
+    "rating_max": 5.0,
+    "rating_mean": 3.501556983616962,
+    "ratings_missing": 0,
+    "movies_missing": 0,
+    "ratings_duplicates": 0,
+    "movies_duplicate_keys": 0,
+    "unknown_movie_ids": 0,
+    "invalid_ratings": 0,
+    "invalid_ids_or_timestamps": 0,
+    "rating_distribution": {
+      "0.5": 1370,
+      "1.0": 2811,
+      "1.5": 1791,
+      "2.0": 7551,
+      "2.5": 5550,
+      "3.0": 20047,
+      "3.5": 13136,
+      "4.0": 26818,
+      "4.5": 8551,
+      "5.0": 13211
+    },
+    "schema": {
+      "ratings": {
+        "userId": "int64",
+        "movieId": "int64",
+        "rating": "float64",
+        "timestamp": "int64"
+      },
+      "movies": {
+        "movieId": "int64",
+        "title": "str",
+        "genres": "str"
+      }
+    }
+  },
+  "after": {
+    "n_ratings": 100836,
+    "n_users": 610,
+    "n_movies_rated": 9724,
+    "n_total_movies": 9742,
+    "rating_min": 0.5,
+    "rating_max": 5.0,
+    "rating_mean": 3.501556983616962,
+    "ratings_missing": 0,
+    "movies_missing": 0,
+    "ratings_duplicates": 0,
+    "movies_duplicate_keys": 0,
+    "unknown_movie_ids": 0,
+    "invalid_ratings": 0,
+    "invalid_ids_or_timestamps": 0,
+    "rating_distribution": {
+      "0.5": 1370,
+      "1.0": 2811,
+      "1.5": 1791,
+      "2.0": 7551,
+      "2.5": 5550,
+      "3.0": 20047,
+      "3.5": 13136,
+      "4.0": 26818,
+      "4.5": 8551,
+      "5.0": 13211
+    },
+    "schema": {
+      "ratings": {
+        "userId": "int64",
+        "movieId": "int64",
+        "rating": "float64",
+        "timestamp": "int64"
+      },
+      "movies": {
+        "movieId": "int64",
+        "title": "str",
+        "genres": "str"
+      }
+    }
+  },
+  "removed_rows": 0,
+  "policy": "Keep first duplicate user/movie; remove missing, invalid and unknown ratings. Metadata errors fail closed."
+}

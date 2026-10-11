@@ -2,141 +2,490 @@
   {
     "movieId": 1,
     "title": "Toy Story (1995)",
-    "case_type": "Bom tấn",
-    "note": "Toy Story (1995) - Rất nhiều rating, kiểm tra xem có bị chiếm bởi các phim bom tấn khác không",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
     "status": "success",
     "warning": null,
     "num_recommendations": 5,
-    "top_1_sim": "Toy Story 2 (1999)",
-    "top_1_score": 0.3301,
+    "top_1_sim": "Independence Day (a.k.a. ID4) (1996)",
+    "top_1_score": 0.5547,
+    "dominant_genre_fraction": 1.0,
     "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 780,
+        "title": "Independence Day (a.k.a. ID4) (1996)",
+        "genres": "Action|Adventure|Sci-Fi|Thriller",
+        "similarity_score": 0.5547,
+        "rating_count": 161,
+        "rating_mean": 3.49,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+      },
+      {
+        "movieId": 480,
+        "title": "Jurassic Park (1993)",
+        "genres": "Action|Adventure|Sci-Fi|Thriller",
+        "similarity_score": 0.5393,
+        "rating_count": 206,
+        "rating_mean": 3.76,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+      },
+      {
+        "movieId": 260,
+        "title": "Star Wars: Episode IV - A New Hope (1977)",
+        "genres": "Action|Adventure|Sci-Fi",
+        "similarity_score": 0.5273,
+        "rating_count": 220,
+        "rating_mean": 4.21,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+      },
+      {
+        "movieId": 3114,
+        "title": "Toy Story 2 (1999)",
+        "genres": "Adventure|Animation|Children|Comedy|Fantasy",
+        "similarity_score": 0.5261,
+        "rating_count": 82,
+        "rating_mean": 3.86,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Animation, Comedy, Fantasy, Adventure, Children)."
+      },
+      {
+        "movieId": 1210,
+        "title": "Star Wars: Episode VI - Return of the Jedi (1983)",
+        "genres": "Action|Adventure|Sci-Fi",
+        "similarity_score": 0.5076,
+        "rating_count": 166,
+        "rating_mean": 4.22,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Toy Story (1995)', cùng thể loại (Adventure)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
   },
   {
-    "movieId": 260,
-    "title": "Star Wars: Episode IV - A New Hope (1977)",
-    "case_type": "Phim kinh điển",
-    "note": "Star Wars: Episode IV - A New Hope (1995) - Thử độ đa dạng thể loại Sci-Fi",
+    "movieId": 3,
+    "title": "Grumpier Old Men (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
     "status": "success",
     "warning": null,
     "num_recommendations": 5,
-    "top_1_sim": "Star Wars: Episode V - The Empire Strikes Back (1980)",
-    "top_1_score": 0.6489,
+    "top_1_sim": "Broken Arrow (1996)",
+    "top_1_score": 0.4713,
+    "dominant_genre_fraction": 0.8,
     "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 95,
+        "title": "Broken Arrow (1996)",
+        "genres": "Action|Adventure|Thriller",
+        "similarity_score": 0.4713,
+        "rating_count": 69,
+        "rating_mean": 3.13,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Grumpier Old Men (1995)', thể loại bổ trợ."
+      },
+      {
+        "movieId": 784,
+        "title": "Cable Guy, The (1996)",
+        "genres": "Comedy|Thriller",
+        "similarity_score": 0.4366,
+        "rating_count": 35,
+        "rating_mean": 2.84,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Grumpier Old Men (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 3450,
+        "title": "Grumpy Old Men (1993)",
+        "genres": "Comedy",
+        "similarity_score": 0.4352,
+        "rating_count": 24,
+        "rating_mean": 3.33,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Grumpier Old Men (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 5,
+        "title": "Father of the Bride Part II (1995)",
+        "genres": "Comedy",
+        "similarity_score": 0.4211,
+        "rating_count": 36,
+        "rating_mean": 3.01,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Grumpier Old Men (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 104,
+        "title": "Happy Gilmore (1996)",
+        "genres": "Comedy",
+        "similarity_score": 0.4189,
+        "rating_count": 72,
+        "rating_mean": 3.44,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Grumpier Old Men (1995)', cùng thể loại (Comedy)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
   },
   {
-    "movieId": 356,
-    "title": "Forrest Gump (1994)",
-    "case_type": "Phim đại chúng",
-    "note": "Forrest Gump (1994) - Kiểm tra độ tương đồng có thiên lệch sang phim drama/phổ biến",
+    "movieId": 6,
+    "title": "Heat (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
     "status": "success",
     "warning": null,
     "num_recommendations": 5,
-    "top_1_sim": "Shawshank Redemption, The (1994)",
-    "top_1_score": 0.4062,
+    "top_1_sim": "Leaving Las Vegas (1995)",
+    "top_1_score": 0.4712,
+    "dominant_genre_fraction": 0.8,
     "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 25,
+        "title": "Leaving Las Vegas (1995)",
+        "genres": "Drama|Romance",
+        "similarity_score": 0.4712,
+        "rating_count": 61,
+        "rating_mean": 3.71,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Heat (1995)', thể loại bổ trợ."
+      },
+      {
+        "movieId": 32,
+        "title": "Twelve Monkeys (a.k.a. 12 Monkeys) (1995)",
+        "genres": "Mystery|Sci-Fi|Thriller",
+        "similarity_score": 0.4378,
+        "rating_count": 140,
+        "rating_mean": 3.99,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Heat (1995)', cùng thể loại (Thriller)."
+      },
+      {
+        "movieId": 733,
+        "title": "Rock, The (1996)",
+        "genres": "Action|Adventure|Thriller",
+        "similarity_score": 0.4257,
+        "rating_count": 91,
+        "rating_mean": 3.63,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Heat (1995)', cùng thể loại (Thriller, Action)."
+      },
+      {
+        "movieId": 736,
+        "title": "Twister (1996)",
+        "genres": "Action|Adventure|Romance|Thriller",
+        "similarity_score": 0.4252,
+        "rating_count": 107,
+        "rating_mean": 3.34,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Heat (1995)', cùng thể loại (Thriller, Action)."
+      },
+      {
+        "movieId": 648,
+        "title": "Mission: Impossible (1996)",
+        "genres": "Action|Adventure|Mystery|Thriller",
+        "similarity_score": 0.4243,
+        "rating_count": 127,
+        "rating_mean": 3.52,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Heat (1995)', cùng thể loại (Thriller, Action)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
   },
   {
-    "movieId": 8844,
-    "title": "Camera Buff (Amator) (1979)",
-    "case_type": "Ít tương tác",
-    "note": "Jumanji (phần tiếp theo hoặc phim ít rating)",
+    "movieId": 10,
+    "title": "GoldenEye (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Die Hard: With a Vengeance (1995)",
+    "top_1_score": 0.5768,
+    "dominant_genre_fraction": 1.0,
+    "identified_issues": [
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 165,
+        "title": "Die Hard: With a Vengeance (1995)",
+        "genres": "Action|Crime|Thriller",
+        "similarity_score": 0.5768,
+        "rating_count": 124,
+        "rating_mean": 3.56,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'GoldenEye (1995)', cùng thể loại (Thriller, Action)."
+      },
+      {
+        "movieId": 349,
+        "title": "Clear and Present Danger (1994)",
+        "genres": "Action|Crime|Drama|Thriller",
+        "similarity_score": 0.5462,
+        "rating_count": 102,
+        "rating_mean": 3.64,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'GoldenEye (1995)', cùng thể loại (Thriller, Action)."
+      },
+      {
+        "movieId": 377,
+        "title": "Speed (1994)",
+        "genres": "Action|Romance|Thriller",
+        "similarity_score": 0.5403,
+        "rating_count": 137,
+        "rating_mean": 3.5,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'GoldenEye (1995)', cùng thể loại (Thriller, Action)."
+      },
+      {
+        "movieId": 380,
+        "title": "True Lies (1994)",
+        "genres": "Action|Adventure|Comedy|Romance|Thriller",
+        "similarity_score": 0.5352,
+        "rating_count": 161,
+        "rating_mean": 3.47,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'GoldenEye (1995)', cùng thể loại (Adventure, Thriller, Action)."
+      },
+      {
+        "movieId": 153,
+        "title": "Batman Forever (1995)",
+        "genres": "Action|Adventure|Comedy|Crime",
+        "similarity_score": 0.5341,
+        "rating_count": 125,
+        "rating_mean": 2.98,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'GoldenEye (1995)', cùng thể loại (Adventure, Action)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
+  },
+  {
+    "movieId": 11,
+    "title": "American President, The (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Dave (1993)",
+    "top_1_score": 0.6267,
+    "dominant_genre_fraction": 0.8,
+    "identified_issues": [
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 440,
+        "title": "Dave (1993)",
+        "genres": "Comedy|Romance",
+        "similarity_score": 0.6267,
+        "rating_count": 59,
+        "rating_mean": 3.57,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'American President, The (1995)', cùng thể loại (Comedy, Romance)."
+      },
+      {
+        "movieId": 597,
+        "title": "Pretty Woman (1990)",
+        "genres": "Comedy|Romance",
+        "similarity_score": 0.5314,
+        "rating_count": 103,
+        "rating_mean": 3.54,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'American President, The (1995)', cùng thể loại (Comedy, Romance)."
+      },
+      {
+        "movieId": 539,
+        "title": "Sleepless in Seattle (1993)",
+        "genres": "Comedy|Drama|Romance",
+        "similarity_score": 0.5278,
+        "rating_count": 80,
+        "rating_mean": 3.43,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'American President, The (1995)', cùng thể loại (Drama, Comedy, Romance)."
+      },
+      {
+        "movieId": 350,
+        "title": "Client, The (1994)",
+        "genres": "Drama|Mystery|Thriller",
+        "similarity_score": 0.4852,
+        "rating_count": 41,
+        "rating_mean": 3.34,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'American President, The (1995)', cùng thể loại (Drama)."
+      },
+      {
+        "movieId": 21,
+        "title": "Get Shorty (1995)",
+        "genres": "Comedy|Crime|Thriller",
+        "similarity_score": 0.4635,
+        "rating_count": 70,
+        "rating_mean": 3.55,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'American President, The (1995)', cùng thể loại (Comedy)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
+  },
+  {
+    "movieId": 12,
+    "title": "Dracula: Dead and Loving It (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Space Jam (1996)",
+    "top_1_score": 0.436,
+    "dominant_genre_fraction": 1.0,
+    "identified_issues": [
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 673,
+        "title": "Space Jam (1996)",
+        "genres": "Adventure|Animation|Children|Comedy|Fantasy|Sci-Fi",
+        "similarity_score": 0.436,
+        "rating_count": 40,
+        "rating_mean": 2.71,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Dracula: Dead and Loving It (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 765,
+        "title": "Jack (1996)",
+        "genres": "Comedy|Drama",
+        "similarity_score": 0.4349,
+        "rating_count": 14,
+        "rating_mean": 3.29,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Dracula: Dead and Loving It (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 2053,
+        "title": "Honey, I Blew Up the Kid (1992)",
+        "genres": "Children|Comedy|Sci-Fi",
+        "similarity_score": 0.4042,
+        "rating_count": 14,
+        "rating_mean": 1.75,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Dracula: Dead and Loving It (1995)', cùng thể loại (Comedy)."
+      },
+      {
+        "movieId": 799,
+        "title": "Frighteners, The (1996)",
+        "genres": "Comedy|Horror|Thriller",
+        "similarity_score": 0.3935,
+        "rating_count": 17,
+        "rating_mean": 3.47,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Dracula: Dead and Loving It (1995)', cùng thể loại (Comedy, Horror)."
+      },
+      {
+        "movieId": 88,
+        "title": "Black Sheep (1996)",
+        "genres": "Comedy",
+        "similarity_score": 0.3808,
+        "rating_count": 12,
+        "rating_mean": 3.21,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Dracula: Dead and Loving It (1995)', cùng thể loại (Comedy)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
+  },
+  {
+    "movieId": 14,
+    "title": "Nixon (1995)",
+    "case_type": "Tín hiệu yếu / thiếu đa dạng",
+    "note": "Quét movieId tăng dần; chỉ giữ ca vi phạm tiêu chí công bố trước.",
+    "status": "success",
+    "warning": null,
+    "num_recommendations": 5,
+    "top_1_sim": "Mighty Aphrodite (1995)",
+    "top_1_score": 0.474,
+    "dominant_genre_fraction": 1.0,
+    "identified_issues": [
+      "Ít nhất 80% gợi ý cùng một thể loại; rủi ro thiếu đa dạng, không kết luận chất lượng thấp."
+    ],
+    "recommendations": [
+      {
+        "movieId": 52,
+        "title": "Mighty Aphrodite (1995)",
+        "genres": "Comedy|Drama|Romance",
+        "similarity_score": 0.474,
+        "rating_count": 21,
+        "rating_mean": 3.64,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Nixon (1995)', cùng thể loại (Drama)."
+      },
+      {
+        "movieId": 25,
+        "title": "Leaving Las Vegas (1995)",
+        "genres": "Drama|Romance",
+        "similarity_score": 0.4624,
+        "rating_count": 61,
+        "rating_mean": 3.71,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Nixon (1995)', cùng thể loại (Drama)."
+      },
+      {
+        "movieId": 805,
+        "title": "Time to Kill, A (1996)",
+        "genres": "Drama|Thriller",
+        "similarity_score": 0.3975,
+        "rating_count": 24,
+        "rating_mean": 3.6,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Nixon (1995)', cùng thể loại (Drama)."
+      },
+      {
+        "movieId": 36,
+        "title": "Dead Man Walking (1995)",
+        "genres": "Crime|Drama",
+        "similarity_score": 0.3837,
+        "rating_count": 51,
+        "rating_mean": 3.82,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Nixon (1995)', cùng thể loại (Drama)."
+      },
+      {
+        "movieId": 786,
+        "title": "Eraser (1996)",
+        "genres": "Action|Drama|Thriller",
+        "similarity_score": 0.3453,
+        "rating_count": 44,
+        "rating_mean": 3.12,
+        "reason": "Được nhiều người dùng cùng yêu thích giống như 'Nixon (1995)', cùng thể loại (Drama)."
+      }
+    ],
+    "suggested_action": "Cân nhắc reranking đa dạng và kiểm tra thủ công"
+  },
+  {
+    "movieId": 4,
+    "title": "Waiting to Exhale (1995)",
+    "case_type": "Cold-start",
+    "note": "Phim thật trong catalog, thiếu rating train.",
     "status": "warning",
-    "warning": null,
+    "warning": "Phim ID 4 có 4 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý.",
     "num_recommendations": 0,
     "top_1_sim": "None",
     "top_1_score": 0.0,
     "identified_issues": [
-      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
-    ]
+      "Phim ID 4 có 4 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý."
+    ],
+    "recommendations": [],
+    "suggested_action": "Thu thập thêm rating; chưa phục vụ gợi ý."
   },
   {
-    "movieId": 193581,
-    "title": "Black Butler: Book of the Atlantic (2017)",
-    "case_type": "Cold-start cực hạn",
-    "note": "Black Butler: Book of the Atlantic (2017) - Chỉ có 1 rating",
+    "movieId": 8,
+    "title": "Tom and Huck (1995)",
+    "case_type": "Cold-start",
+    "note": "Phim thật trong catalog, thiếu rating train.",
     "status": "warning",
-    "warning": null,
+    "warning": "Phim ID 8 có 4 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý.",
     "num_recommendations": 0,
     "top_1_sim": "None",
     "top_1_score": 0.0,
     "identified_issues": [
-      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
-    ]
+      "Phim ID 8 có 4 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý."
+    ],
+    "recommendations": [],
+    "suggested_action": "Thu thập thêm rating; chưa phục vụ gợi ý."
   },
   {
-    "movieId": 999999,
-    "title": "Unknown / Not found",
-    "case_type": "Out-of-vocabulary (OOV)",
-    "note": "Phim không hề tồn tại trong cơ sở dữ liệu",
+    "movieId": 13,
+    "title": "Balto (1995)",
+    "case_type": "Cold-start",
+    "note": "Phim thật trong catalog, thiếu rating train.",
     "status": "warning",
-    "warning": null,
+    "warning": "Phim ID 13 có 1 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý.",
     "num_recommendations": 0,
     "top_1_sim": "None",
     "top_1_score": 0.0,
     "identified_issues": [
-      "Cảnh báo thiếu dữ liệu hoặc không tìm thấy."
-    ]
-  },
-  {
-    "movieId": 47,
-    "title": "Seven (a.k.a. Se7en) (1995)",
-    "case_type": "Phim hình sự giật gân",
-    "note": "Seven (Se7en) (1995) - Kiểm tra xem gợi ý có giữ được đúng tone đen tối",
-    "status": "success",
-    "warning": null,
-    "num_recommendations": 5,
-    "top_1_sim": "Pulp Fiction (1994)",
-    "top_1_score": 0.3456,
-    "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
-  },
-  {
-    "movieId": 296,
-    "title": "Pulp Fiction (1994)",
-    "case_type": "Tác phẩm độc đáo",
-    "note": "Pulp Fiction (1994) - Phim có sự pha trộn giữa Crime, Comedy",
-    "status": "success",
-    "warning": null,
-    "num_recommendations": 5,
-    "top_1_sim": "Usual Suspects, The (1995)",
-    "top_1_score": 0.4164,
-    "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
-  },
-  {
-    "movieId": 117176,
-    "title": "The Theory of Everything (2014)",
-    "case_type": "Phim hoạt hình hiện đại",
-    "note": "Big Hero 6 (2014)",
-    "status": "success",
-    "warning": "Cảnh báo: Phim 'The Theory of Everything (2014)' có ít đánh giá (8 lượt), độ tin cậy của gợi ý có thể bị ảnh hưởng.",
-    "num_recommendations": 5,
-    "top_1_sim": "Pitch Perfect 2 (2015)",
-    "top_1_score": 0.4661,
-    "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
-  },
-  {
-    "movieId": 858,
-    "title": "Godfather, The (1972)",
-    "case_type": "Kinh điển Crime/Drama",
-    "note": "The Godfather (1972) - Kiểm tra phim tiếp nối có gợi ý The Godfather Part II không",
-    "status": "success",
-    "warning": null,
-    "num_recommendations": 5,
-    "top_1_sim": "Godfather: Part II, The (1974)",
-    "top_1_score": 0.6731,
-    "identified_issues": [
-      "Gợi ý tốt, tương đồng cao."
-    ]
+      "Phim ID 13 có 1 lượt đánh giá train, dưới ngưỡng 10; không đủ dữ liệu gợi ý."
+    ],
+    "recommendations": [],
+    "suggested_action": "Thu thập thêm rating; chưa phục vụ gợi ý."
   }
 ]
