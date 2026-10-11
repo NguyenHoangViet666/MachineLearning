@@ -4,7 +4,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   // Tự động nhận diện port: nếu chạy trên port 8000 thì dùng relative path, nếu mở bằng Live Server (5500) thì gọi sang 8000
-  const API_BASE = (window.location.port === "8000" || window.location.port === "") ? "" : "http://127.0.0.1:8000";
+  const API_BASE = (window.location.protocol === "file:" || window.location.port === "5500") ? "http://127.0.0.1:8000" : "";
 
   // Elements
   const navButtons = document.querySelectorAll(".nav-btn");
@@ -15,6 +15,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchSpinner = document.getElementById("search-spinner");
   const genreFilter = document.getElementById("filter-genre");
   const kSelect = document.getElementById("select-k");
+  const yearMin = document.getElementById("year-min");
+  const yearMax = document.getElementById("year-max");
+
+  async function apiFetch(url, options) {
+    if (url.includes("/api/movies?") || url.includes("/api/recommendations?")) {
+      for (const input of [yearMin, yearMax]) {
+        if (input && !input.checkValidity()) throw new Error("Năm phải là số nguyên từ 1870 đến 2100.");
+      }
+      if (yearMin?.value && yearMax?.value && Number(yearMin.value) > Number(yearMax.value)) {
+        throw new Error("Năm bắt đầu phải nhỏ hơn hoặc bằng năm kết thúc.");
+      }
+      if (yearMin?.value) url += `&year_min=${encodeURIComponent(yearMin.value)}`;
+      if (yearMax?.value) url += `&year_max=${encodeURIComponent(yearMax.value)}`;
+    }
+    const response = await window.fetch(url, options);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(typeof error.detail === "string" ? error.detail : `Đầu vào không hợp lệ hoặc dịch vụ chưa sẵn sàng (HTTP ${response.status}).`);
+    }
+    return response;
+  }
   const btnRecommend = document.getElementById("btn-search-recommend");
   const btnResetFilters = document.getElementById("btn-reset-filters");
 
@@ -54,6 +75,31 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedMovieId = null;
   let searchDebounceTimeout = null;
 
+  async function loadEvaluation() {
+    const body = document.getElementById("comparison-table-body");
+    try {
+      const response = await apiFetch(`${API_BASE}/api/model-card`);
+      const card = await response.json();
+      const metrics = card.evaluation_summary.test;
+      const k = card.technical_specifications.k;
+      document.getElementById("selected-algorithm").textContent = `Mô hình chọn bằng validation: Cosine ${card.technical_specifications.mean_centered ? "Mean-centered" : "Raw"}; K=${k}; ngưỡng rating train=${card.technical_specifications.min_ratings}.`;
+      document.getElementById("selected-cold-start").textContent = `Cold-start: phim có ít hơn ${card.technical_specifications.min_ratings} lượt đánh giá train chưa đủ dữ liệu để phục vụ.`;
+      const selected = metrics.selected;
+      document.getElementById("kpi-hit-label").textContent = `HitRate@${k} (mô hình đã chọn)`;
+      document.getElementById("kpi-precision-label").textContent = `Precision@${k}`;
+      document.getElementById("kpi-hitrate").textContent = `${(selected[`HitRate@${k}`] * 100).toFixed(2)}%`;
+      document.getElementById("kpi-precision").textContent = selected[`Precision@${k}`].toFixed(4);
+      document.getElementById("kpi-coverage").textContent = `${(selected.Coverage * 100).toFixed(2)}%`;
+      document.getElementById("kpi-latency").textContent = `${selected.AvgLatencyMs.toFixed(2)} ms`;
+      body.innerHTML = [["popularity", "Popularity", "Số rating train"], ["cosine_raw", "Cosine Raw", "Rating thô"], ["cosine_centered", "Cosine Mean-centered", "Trừ trung bình user"]].map(([key, name, representation]) => {
+        const row = metrics[key];
+        return `<tr><td>${name}</td><td>${representation}</td><td>${row["HitRate@10"].toFixed(4)}</td><td>${row["Precision@10"].toFixed(4)}</td><td>${row["Recall@10"].toFixed(4)}</td><td>${row.Coverage.toFixed(4)}</td><td>${key === card.evaluation_summary.selected_model ? "Được chọn bằng validation" : "Mô hình đối chứng"}</td></tr>`;
+      }).join("");
+    } catch (error) {
+      body.innerHTML = `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
+    }
+  }
+
   // State: Bộ lọc thể loại đa năng
   const selectedGenres = new Set();
   let genreMatchMode = "any"; // 'any' | 'exclude' | 'all'
@@ -73,13 +119,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (targetTabId === "tab-dashboard") {
         loadFailureCases();
+        loadEvaluation();
       }
+      if (targetTabId === "tab-scope") loadEvaluation();
     });
   });
 
   // ==================== AUTOCOMPLETE SEARCH ====================
   searchInput.addEventListener("input", (e) => {
     const val = e.target.value.trim();
+    selectedMovieId = null;
     clearTimeout(searchDebounceTimeout);
 
     if (val.length < 2) {
@@ -95,11 +144,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (selectedGenres.size > 0) {
           url += `&genres=${encodeURIComponent(Array.from(selectedGenres).join(","))}&match_mode=${genreMatchMode}`;
         }
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         const data = await res.json();
         renderAutocomplete(data.movies || []);
       } catch (err) {
         console.error("Lỗi tìm kiếm phim:", err);
+        autocompleteList.innerHTML = `<div class="autocomplete-item">${escapeHtml(err.message)}</div>`;
+        autocompleteList.classList.remove("hidden");
       } finally {
         searchSpinner.classList.add("hidden");
       }
@@ -166,15 +217,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const existingCells = document.querySelectorAll(".genre-item-cell");
     if (existingCells.length === 0 && genresGridScroller) {
       try {
-        const res = await fetch(`${API_BASE}/api/genres`);
+        const res = await apiFetch(`${API_BASE}/api/genres`);
         if (res.ok) {
           const data = await res.json();
           genresGridScroller.innerHTML = (data.genres || []).map(g => `
-            <div class="genre-item-cell" data-genre="${escapeHtml(g.name)}">
+            <div class="genre-item-cell" data-genre="${escapeHtml(g.genre)}">
               <span class="genre-checkbox-box">
                 <svg class="check-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </span>
-              <span class="genre-item-label">${escapeHtml(g.name)}</span>
+              <span class="genre-item-label">${escapeHtml(g.genre)}</span>
               <span class="genre-item-badge">${g.count}</span>
             </div>
           `).join("");
@@ -369,63 +420,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==================== TÌM KIẾM & LÀM MỚI ====================
-  function handleSearchAction() {
-    const query = searchInput.value.trim();
-
-    // 1. Nếu có nhập tên phim trong ô input
-    if (query) {
-      let url = `${API_BASE}/api/movies?query=${encodeURIComponent(query)}&limit=1`;
-      if (selectedGenres.size > 0) {
-        url += `&genres=${encodeURIComponent(Array.from(selectedGenres).join(","))}&match_mode=${genreMatchMode}`;
-      }
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if (data.movies && data.movies.length > 0) {
-            selectedMovieId = data.movies[0].movieId;
-            searchInput.value = data.movies[0].title;
-            executeRecommendation(selectedMovieId);
-          } else {
-            alert("Không tìm thấy phim phù hợp với từ khóa và bộ lọc hiện tại!");
-          }
-        })
-        .catch(err => console.error("Lỗi tìm kiếm:", err));
-      return;
-    }
-
-    // 2. Nếu đã có phim được chọn từ trước (hoặc phim mẫu)
+  async function handleSearchAction() {
     if (selectedMovieId) {
-      executeRecommendation(selectedMovieId);
+      await executeRecommendation(selectedMovieId);
       return;
     }
-
-    // 3. Nếu chưa chọn phim nhưng có chọn thể loại: tìm phim đầu tiên phù hợp với thể loại
-    if (selectedGenres.size > 0) {
-      const gList = Array.from(selectedGenres).join(",");
-      const k = parseInt(kSelect?.value) || 10;
-      fetch(`${API_BASE}/api/movies?genres=${encodeURIComponent(gList)}&match_mode=${genreMatchMode}&limit=${k}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.movies && data.movies.length > 0) {
-            selectedMovieId = data.movies[0].movieId;
-            searchInput.value = data.movies[0].title;
-            executeRecommendation(selectedMovieId);
-          } else {
-            alert("Không có phim nào thỏa mãn bộ lọc thể loại đã chọn!");
-          }
-        })
-        .catch(err => console.error("Lỗi tìm phim theo thể loại:", err));
-      return;
+    try {
+      const query = searchInput.value.trim();
+      if (!query && !selectedGenres.size && !yearMin?.value && !yearMax?.value) {
+        alert("Nhập tên phim, chọn bộ lọc hoặc chọn một phim demo để bắt đầu.");
+        return;
+      }
+      const url = `${API_BASE}/api/movies?query=${encodeURIComponent(query)}&genres=${encodeURIComponent(Array.from(selectedGenres).join(","))}&match_mode=${genreMatchMode}&limit=24`;
+      const response = await apiFetch(url);
+      const data = await response.json();
+      renderAutocomplete(data.movies);
+    } catch (error) {
+      alert(error.message);
     }
-
-    // 4. Mặc định: gợi ý phim Toy Story (1)
-    selectedMovieId = 1;
-    executeRecommendation(1);
   }
-
   // Đặt lại toàn bộ bộ lọc và từ khóa tìm kiếm
   function resetAllFilters() {
     searchInput.value = "";
+    if (yearMin) yearMin.value = "";
+    if (yearMax) yearMax.value = "";
     selectedGenres.clear();
     genreMatchMode = "any";
 
@@ -500,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       // 1. Lấy chi tiết seed movie
-      const movieRes = await fetch(`${API_BASE}/api/movies/${movieId}`);
+      const movieRes = await apiFetch(`${API_BASE}/api/movies/${movieId}`);
       if (movieRes.ok) {
         const movieData = await movieRes.json();
         seedTitle.textContent = movieData.title;
@@ -519,7 +537,7 @@ document.addEventListener("DOMContentLoaded", () => {
         url += `&genre=${encodeURIComponent(genreFilter.value)}`;
       }
 
-      const recRes = await fetch(url);
+      const recRes = await apiFetch(url);
       const recData = await recRes.json();
       const elapsed = Math.round(performance.now() - startTime);
 
@@ -545,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="empty-state">
           <div class="empty-icon">⚠️</div>
           <h4>Lỗi xử lý yêu cầu</h4>
-          <p>${err.message || "Vui lòng đảm bảo server đang chạy và model đã được nạp."}</p>
+          <p>${escapeHtml(err.message || "Vui lòng đảm bảo server đang chạy và model đã được nạp.")}</p>
         </div>
       `;
     }
@@ -627,7 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==================== DASHBOARD: 10 FAILURE CASES ====================
   async function loadFailureCases() {
     try {
-      const res = await fetch(`${API_BASE}/api/failure-cases`);
+      const res = await apiFetch(`${API_BASE}/api/failure-cases`);
       if (!res.ok) return;
       const data = await res.json();
       
@@ -820,7 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
     scrollChatBottom();
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
+      const res = await apiFetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: cleanText, k: 5 })

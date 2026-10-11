@@ -199,6 +199,12 @@
           </button>
 
           <!-- Chọn Số Lượng K -->
+          <div class="control-item year-filter">
+            <label for="year-min">Năm từ (1870–2100):</label>
+            <input id="year-min" type="number" min="1870" max="2100" placeholder="Bất kỳ">
+            <label for="year-max">Đến năm:</label>
+            <input id="year-max" type="number" min="1870" max="2100" placeholder="Bất kỳ">
+          </div>
           <div class="control-item k-select-wrap">
             <label for="select-k">Số lượng (K):</label>
             <select id="select-k">
@@ -390,24 +396,24 @@
       <!-- KPI Summary Cards -->
       <div class="kpi-grid">
         <div class="kpi-card glass-card">
-          <span class="kpi-label">Hit-Rate@10 (Best Model)</span>
-          <span class="kpi-value text-accent" id="kpi-hitrate">~38.5%</span>
-          <span class="kpi-delta">+42% so với Baseline</span>
+          <span class="kpi-label" id="kpi-hit-label">Hit-rate mô hình đã chọn</span>
+          <span class="kpi-value text-accent" id="kpi-hitrate">—</span>
+          <span class="kpi-delta">Kết quả test đã đóng băng</span>
         </div>
         <div class="kpi-card glass-card">
-          <span class="kpi-label">Precision@10</span>
-          <span class="kpi-value text-accent" id="kpi-precision">0.071</span>
+          <span class="kpi-label" id="kpi-precision-label">Precision mô hình đã chọn</span>
+          <span class="kpi-value text-accent" id="kpi-precision">—</span>
           <span class="kpi-delta">Trên tập test độc lập</span>
         </div>
         <div class="kpi-card glass-card">
           <span class="kpi-label">Catalog Coverage</span>
-          <span class="kpi-value text-accent" id="kpi-coverage">~7.8%</span>
-          <span class="kpi-delta">Gấp 12.8x lần Popularity</span>
+          <span class="kpi-value text-accent" id="kpi-coverage">—</span>
+          <span class="kpi-delta">Phim được gợi ý / phim có rating train</span>
         </div>
         <div class="kpi-card glass-card">
           <span class="kpi-label">Thời Gian Truy Vấn TB</span>
-          <span class="kpi-value text-accent">&lt; 15 ms</span>
-          <span class="kpi-delta">Tối ưu ma trận thưa CSR</span>
+          <span class="kpi-value text-accent" id="kpi-latency">—</span>
+          <span class="kpi-delta">Trung bình mỗi user trong đánh giá offline</span>
         </div>
       </div>
 
@@ -427,35 +433,7 @@
                 <th>Đánh Giá</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td><strong>Baseline (Popularity)</strong></td>
-                <td>Xếp hạng theo số vote & Bayesian score</td>
-                <td>0.2700</td>
-                <td>0.0485</td>
-                <td>0.0287</td>
-                <td>0.0061</td>
-                <td><span class="badge badge-warning">Coverage rất thấp, không cá nhân hóa</span></td>
-              </tr>
-              <tr>
-                <td><strong>Cosine (Raw Vector)</strong></td>
-                <td>Cosine trên ma trận rating thô</td>
-                <td>0.3700</td>
-                <td>0.0690</td>
-                <td>0.0553</td>
-                <td>0.0725</td>
-                <td><span class="badge badge-success">Vượt trội Baseline +37%</span></td>
-              </tr>
-              <tr class="highlight-row">
-                <td><strong>Cosine (Mean-Centered) ★</strong></td>
-                <td>Adjusted Cosine (trừ trung bình user)</td>
-                <td>0.3850</td>
-                <td>0.0715</td>
-                <td>0.0582</td>
-                <td>0.0780</td>
-                <td><span class="badge badge-primary">Mô hình tốt nhất (Best)</span></td>
-              </tr>
-            </tbody>
+            <tbody id="comparison-table-body"><tr><td colspan="7">Đang tải kết quả thực nghiệm...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -537,7 +515,7 @@
 
           <div class="doc-block">
             <h4>2. Thuật toán cốt lõi (Core Algorithm)</h4>
-            <p><strong>Độ tương đồng Cosine Điều Chỉnh (Adjusted Cosine Similarity):</strong></p>
+            <p id="selected-algorithm">Đang tải cấu hình mô hình đã chọn...</p>
             
             <!-- HỘP HIỂN THỊ CÔNG THỨC TOÁN HỌC TRỰC QUAN -->
             <div class="math-formula-container">
@@ -567,7 +545,7 @@
               </div>
             </div>
 
-            <p class="math-caption-text">Khử triệt để thiên vị giữa người dùng khó tính (chấm điểm khắt khe) và người dùng dễ dãi (luôn chấm 5 sao).</p>
+            <p class="math-caption-text">Mean-centering điều chỉnh mức chấm điểm trung bình của từng người dùng. Pipeline so sánh cả rating thô và mean-centered trên validation.</p>
           </div>
 
           <div class="doc-block">
@@ -582,7 +560,7 @@
           <div class="doc-block">
             <h4>4. Giới hạn & Điểm yếu (Known Limitations)</h4>
             <ul>
-              <li><strong>Cold-start:</strong> Các phim mới hoặc phim có ít hơn 5 lượt đánh giá không có đủ thông tin để tính toán tương đồng chính xác.</li>
+              <li id="selected-cold-start">Đang tải ngưỡng số lượt đánh giá train tối thiểu...</li>
               <li><strong>Catalog Long-tail:</strong> Phim bom tấn thường có xu hướng kéo điểm tương đồng cao hơn các tác phẩm độc lập.</li>
             </ul>
           </div>

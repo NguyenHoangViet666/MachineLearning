@@ -1,0 +1,33 @@
+{
+  "seed": 42,
+  "split": {
+    "strategy": "per-user temporal; timestamp then movieId; ties may cross split boundaries",
+    "train": 0.7,
+    "validation": 0.1,
+    "test": 0.2,
+    "randomized": false
+  },
+  "selection_rule": "Validation Precision@K, coverage, smaller K, raw, smaller min_ratings",
+  "selected": {
+    "mean_centered": false,
+    "min_ratings": 10,
+    "k": 5
+  },
+  "evaluation": {
+    "positive_threshold": 3.5,
+    "max_users": null,
+    "unit": "user"
+  },
+  "python": "3.11.9",
+  "packages": {
+    "numpy": "2.4.6",
+    "pandas": "3.0.6",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.9.1",
+    "fastapi": "0.141.1",
+    "pydantic": "2.13.5",
+    "matplotlib": "3.11.2",
+    "seaborn": "0.13.2"
+  },
+  "artifact_sha256": "48d0ff14027775097aa85558161196d9186fbda8567a0c7d10d147b7d39e4dfb"
+}

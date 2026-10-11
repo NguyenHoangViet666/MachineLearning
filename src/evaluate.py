@@ -19,8 +19,9 @@ def evaluate_recommender(
     test_ratings: pd.DataFrame, 
     k: int = 10,
     positive_threshold: float = 3.5,
-    max_test_users: int = 200
-) -> Dict[str, float]:
+    max_test_users: int = None,
+    random_state: int = 42
+) -> Dict[str, Any]:
     """
     Đánh giá hệ thống gợi ý trên tập Test đã được tách riêng.
     
@@ -37,10 +38,9 @@ def evaluate_recommender(
     test_positives = test_ratings[test_ratings["rating"] >= positive_threshold]
     test_users = test_positives["userId"].unique()
     
-    if len(test_users) > max_test_users:
+    if max_test_users is not None and len(test_users) > max_test_users:
         # Chọn mẫu ngẫu nhiên có cố định seed để tốc độ đánh giá nhanh và nhất quán
-        np.random.seed(42)
-        eval_users = np.random.choice(test_users, size=max_test_users, replace=False)
+        eval_users = np.random.default_rng(random_state).choice(test_users, size=max_test_users, replace=False)
     else:
         eval_users = test_users
 
@@ -49,6 +49,7 @@ def evaluate_recommender(
     recalls = []
     all_recommended_items: Set[int] = set()
     query_latencies = []
+    user_results = []
 
     # Map phim user đã xem trong train để tránh recommend lại
     train_user_items = train_ratings.groupby("userId")["movieId"].apply(set).to_dict()
@@ -108,6 +109,7 @@ def evaluate_recommender(
         hits.append(hit)
         precisions.append(prec)
         recalls.append(rec)
+        user_results.append({"userId": int(user_id), "train_interactions": len(train_items), "hit": hit, "precision": prec, "recall": rec})
 
     hit_rate = float(np.mean(hits)) if hits else 0.0
     precision_at_k = float(np.mean(precisions)) if precisions else 0.0
@@ -123,6 +125,46 @@ def evaluate_recommender(
         "AvgLatencyMs": round(avg_latency, 2),
         "EvaluatedUsers": len(hits)
     }
+    rng = np.random.default_rng(random_state)
+    results["ConfidenceIntervals95"] = {}
+    for label, values in [(f"HitRate@{k}", hits), (f"Precision@{k}", precisions), (f"Recall@{k}", recalls)]:
+        if values:
+            samples = rng.choice(np.asarray(values), size=(1000, len(values)), replace=True).mean(axis=1)
+            results["ConfidenceIntervals95"][label] = [round(float(v), 4) for v in np.quantile(samples, [0.025, 0.975])]
+    results["ByHistoryLength"] = {}
+    for name, lower, upper in [("short", 0, 50), ("medium", 50, 200), ("long", 200, float("inf"))]:
+        rows = [r for r in user_results if lower <= r["train_interactions"] < upper]
+        results["ByHistoryLength"][name] = {"users": len(rows), "hit_rate": float(np.mean([r["hit"] for r in rows])) if rows else None, "precision": float(np.mean([r["precision"] for r in rows])) if rows else None}
+    results["Protocol"] = {"unit": "user; aggregate cosine of up to five highest-rated training movies", "positive_threshold": positive_threshold, "seed": random_state, "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning", "eligible_users": len(test_users), "sample_limit": max_test_users}
 
     logger.info(f"Kết quả đánh giá (K={k}): {results}")
     return results
+
+
+def main():
+    import argparse
+    import json
+    from pathlib import Path
+    from src.models import CosineItemItemRecommender
+    parser = argparse.ArgumentParser(description="Evaluate a saved model without retraining")
+    parser.add_argument("--split", choices=["validation", "test"], default="validation")
+    parser.add_argument("--model", default="models/cosine_recommender.pkl")
+    parser.add_argument("--output", default="reports/evaluation.json")
+    args = parser.parse_args()
+    config = json.loads(Path("models/config.json").read_text(encoding="utf-8"))
+    if args.split == "test":
+        # The final test is already frozen by train. Inspect it, do not recompute.
+        frozen = json.loads(Path("reports/experiment_results.json").read_text(encoding="utf-8"))
+        if frozen["status"] != "complete":
+            raise SystemExit("Final test is incomplete; inspect the recorded checkpoint. Do not silently rerun test.")
+        print(json.dumps(frozen["test"], ensure_ascii=False, indent=2))
+        return
+    model = CosineItemItemRecommender.load(args.model)
+    result = evaluate_recommender(model, pd.read_csv("data/processed/train_ratings.csv"), pd.read_csv("data/processed/val_ratings.csv"), k=config["selected"]["k"], random_state=config["seed"])
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

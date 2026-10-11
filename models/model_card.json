@@ -1,58 +1,1214 @@
 {
   "model_name": "MovieLens Item-Item Cosine Recommender",
-  "version": "1.0.0",
-  "author": "Nguyễn Hoàng Việt (MSV 10123357) & Vũ Thành Minh (Lớp 12523W.1, ĐH SPKT Hưng Yên - HYUTE)",
+  "version": "2.0.0",
   "intended_use": {
-    "primary_task": "Item-to-item movie recommendation based on user interaction vectors",
-    "intended_users": "Nền tảng xem phim, phục vụ người dùng tìm phim tương tự",
-    "out_of_scope": "Dự đoán điểm số chính xác (Rating regression), hồ sơ người dùng nhạy cảm"
+    "primary_task": "Item-to-item retrieval; evaluation aggregates five training seeds per user",
+    "out_of_scope": "Rating prediction; sensitive preference inference; causal claims"
   },
   "training_data": {
     "dataset": "MovieLens latest-small (GroupLens)",
-    "num_ratings_train": 62671,
-    "num_movies_indexed": 2770,
+    "num_ratings_train": 71078,
+    "num_movies_indexed": 1670,
     "num_users_indexed": 610,
-    "sparsity": "96.29%"
+    "sparsity": 0.9456601550996367
   },
   "technical_specifications": {
-    "algorithm": "Adjusted Cosine Similarity (Item-Item Collaborative Filtering)",
-    "mean_centering": true,
-    "min_movie_ratings": 5,
-    "similarity_metric": "Cosine (Row-normalized dot product)"
+    "mean_centered": false,
+    "min_ratings": 10,
+    "k": 5
   },
   "evaluation_summary": {
-    "exp1_vs_baseline": {
+    "validation": {
+      "baseline_at_10": {
+        "HitRate@10": 0.2451,
+        "Precision@10": 0.0377,
+        "Recall@10": 0.065,
+        "Coverage": 0.0113,
+        "AvgLatencyMs": 0.42,
+        "EvaluatedUsers": 567,
+        "ConfidenceIntervals95": {
+          "HitRate@10": [
+            0.2099,
+            0.2805
+          ],
+          "Precision@10": [
+            0.0314,
+            0.0444
+          ],
+          "Recall@10": [
+            0.0518,
+            0.0799
+          ]
+        },
+        "ByHistoryLength": {
+          "short": {
+            "users": 260,
+            "hit_rate": 0.19230769230769232,
+            "precision": 0.02653846153846154
+          },
+          "medium": {
+            "users": 218,
+            "hit_rate": 0.23394495412844038,
+            "precision": 0.030733944954128442
+          },
+          "long": {
+            "users": 89,
+            "hit_rate": 0.42696629213483145,
+            "precision": 0.08764044943820225
+          }
+        },
+        "Protocol": {
+          "unit": "user; aggregate cosine of up to five highest-rated training movies",
+          "positive_threshold": 3.5,
+          "seed": 42,
+          "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+          "eligible_users": 567,
+          "sample_limit": null
+        }
+      },
+      "grid": [
+        {
+          "mean_centered": false,
+          "min_ratings": 1,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.1693,
+            "Precision@5": 0.043,
+            "Recall@5": 0.0452,
+            "Coverage": 0.0975,
+            "AvgLatencyMs": 4.9,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.1375,
+                0.2011
+              ],
+              "Precision@5": [
+                0.0349,
+                0.0512
+              ],
+              "Recall@5": [
+                0.0334,
+                0.0577
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.15,
+                "precision": 0.036923076923076927
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.13302752293577982,
+                "precision": 0.03211009174311927
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.3146067415730337,
+                "precision": 0.08764044943820225
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 1,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.2663,
+            "Precision@10": 0.0381,
+            "Recall@10": 0.0761,
+            "Coverage": 0.1612,
+            "AvgLatencyMs": 6.59,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.2293,
+                0.3034
+              ],
+              "Precision@10": [
+                0.0321,
+                0.0444
+              ],
+              "Recall@10": [
+                0.0615,
+                0.0914
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.23076923076923078,
+                "precision": 0.028076923076923076
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.24311926605504589,
+                "precision": 0.03211009174311927
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.42696629213483145,
+                "precision": 0.08202247191011237
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 1,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.3968,
+            "Precision@20": 0.0335,
+            "Recall@20": 0.124,
+            "Coverage": 0.2497,
+            "AvgLatencyMs": 6.2,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.3563,
+                0.4339
+              ],
+              "Precision@20": [
+                0.0292,
+                0.0383
+              ],
+              "Recall@20": [
+                0.1053,
+                0.1434
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.33076923076923076,
+                "precision": 0.021923076923076927
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.3944954128440367,
+                "precision": 0.031422018348623855
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.5955056179775281,
+                "precision": 0.07247191011235955
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 5,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.1746,
+            "Precision@5": 0.0448,
+            "Recall@5": 0.0461,
+            "Coverage": 0.0806,
+            "AvgLatencyMs": 2.78,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.1429,
+                0.2063
+              ],
+              "Precision@5": [
+                0.0363,
+                0.0533
+              ],
+              "Recall@5": [
+                0.0345,
+                0.0584
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.15,
+                "precision": 0.03692307692307692
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.14220183486238533,
+                "precision": 0.03394495412844037
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.3258426966292135,
+                "precision": 0.09438202247191012
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 5,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.2804,
+            "Precision@10": 0.0404,
+            "Recall@10": 0.0782,
+            "Coverage": 0.1239,
+            "AvgLatencyMs": 3.2,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.2434,
+                0.3157
+              ],
+              "Precision@10": [
+                0.0342,
+                0.0467
+              ],
+              "Recall@10": [
+                0.0636,
+                0.0938
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.2423076923076923,
+                "precision": 0.029230769230769234
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.25688073394495414,
+                "precision": 0.03348623853211009
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.449438202247191,
+                "precision": 0.0898876404494382
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 5,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.4145,
+            "Precision@20": 0.0356,
+            "Recall@20": 0.1268,
+            "Coverage": 0.1791,
+            "AvgLatencyMs": 4.43,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.3756,
+                0.4515
+              ],
+              "Precision@20": [
+                0.0309,
+                0.0403
+              ],
+              "Recall@20": [
+                0.1078,
+                0.1453
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.3423076923076923,
+                "precision": 0.022500000000000003
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.41284403669724773,
+                "precision": 0.03279816513761468
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.6292134831460674,
+                "precision": 0.08089887640449439
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 10,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.1834,
+            "Precision@5": 0.0466,
+            "Recall@5": 0.0473,
+            "Coverage": 0.0721,
+            "AvgLatencyMs": 2.36,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.1516,
+                0.2134
+              ],
+              "Precision@5": [
+                0.0377,
+                0.0554
+              ],
+              "Recall@5": [
+                0.0362,
+                0.0597
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.1576923076923077,
+                "precision": 0.03769230769230769
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.1559633027522936,
+                "precision": 0.037614678899082564
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.3258426966292135,
+                "precision": 0.09438202247191012
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 10,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.284,
+            "Precision@10": 0.0413,
+            "Recall@10": 0.0779,
+            "Coverage": 0.1032,
+            "AvgLatencyMs": 2.75,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.2469,
+                0.3193
+              ],
+              "Precision@10": [
+                0.0347,
+                0.048
+              ],
+              "Recall@10": [
+                0.0637,
+                0.0934
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.2423076923076923,
+                "precision": 0.029230769230769237
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.26605504587155965,
+                "precision": 0.03532110091743119
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.449438202247191,
+                "precision": 0.09101123595505617
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": false,
+          "min_ratings": 10,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.4198,
+            "Precision@20": 0.0364,
+            "Recall@20": 0.1292,
+            "Coverage": 0.1402,
+            "AvgLatencyMs": 2.51,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.3792,
+                0.4586
+              ],
+              "Precision@20": [
+                0.0316,
+                0.0415
+              ],
+              "Recall@20": [
+                0.1094,
+                0.1476
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.34615384615384615,
+                "precision": 0.022692307692307692
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.41743119266055045,
+                "precision": 0.03394495412844037
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.6404494382022472,
+                "precision": 0.08258426966292134
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 1,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.0758,
+            "Precision@5": 0.0176,
+            "Recall@5": 0.0181,
+            "Coverage": 0.1645,
+            "AvgLatencyMs": 4.64,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.0564,
+                0.0952
+              ],
+              "Precision@5": [
+                0.0127,
+                0.0233
+              ],
+              "Recall@5": [
+                0.0114,
+                0.0257
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.07307692307692308,
+                "precision": 0.016153846153846154
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.06422018348623854,
+                "precision": 0.013761467889908258
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.11235955056179775,
+                "precision": 0.031460674157303366
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 1,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.1252,
+            "Precision@10": 0.0157,
+            "Recall@10": 0.0356,
+            "Coverage": 0.2619,
+            "AvgLatencyMs": 6.13,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.0988,
+                0.1534
+              ],
+              "Precision@10": [
+                0.012,
+                0.0199
+              ],
+              "Recall@10": [
+                0.0244,
+                0.0459
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.11923076923076924,
+                "precision": 0.01423076923076923
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.10550458715596331,
+                "precision": 0.011926605504587158
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.19101123595505617,
+                "precision": 0.029213483146067417
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 1,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.1975,
+            "Precision@20": 0.0135,
+            "Recall@20": 0.0528,
+            "Coverage": 0.3952,
+            "AvgLatencyMs": 5.5,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.164,
+                0.231
+              ],
+              "Precision@20": [
+                0.0108,
+                0.0165
+              ],
+              "Recall@20": [
+                0.0404,
+                0.0641
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.16923076923076924,
+                "precision": 0.010192307692307691
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.17889908256880735,
+                "precision": 0.011009174311926608
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.3258426966292135,
+                "precision": 0.02921348314606741
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 5,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.0988,
+            "Precision@5": 0.0236,
+            "Recall@5": 0.0208,
+            "Coverage": 0.1186,
+            "AvgLatencyMs": 4.27,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.0758,
+                0.1235
+              ],
+              "Precision@5": [
+                0.0176,
+                0.0303
+              ],
+              "Recall@5": [
+                0.0139,
+                0.0287
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.07692307692307693,
+                "precision": 0.019230769230769232
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.0871559633027523,
+                "precision": 0.01834862385321101
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.19101123595505617,
+                "precision": 0.04943820224719102
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 5,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.1675,
+            "Precision@10": 0.0213,
+            "Recall@10": 0.0421,
+            "Coverage": 0.172,
+            "AvgLatencyMs": 3.19,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.134,
+                0.1975
+              ],
+              "Precision@10": [
+                0.0171,
+                0.0259
+              ],
+              "Recall@10": [
+                0.0308,
+                0.0535
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.1346153846153846,
+                "precision": 0.01653846153846154
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.15137614678899083,
+                "precision": 0.016972477064220188
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.30337078651685395,
+                "precision": 0.04606741573033708
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 5,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.2646,
+            "Precision@20": 0.0187,
+            "Recall@20": 0.0633,
+            "Coverage": 0.2312,
+            "AvgLatencyMs": 8.06,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.224,
+                0.3016
+              ],
+              "Precision@20": [
+                0.0157,
+                0.0221
+              ],
+              "Recall@20": [
+                0.0493,
+                0.0754
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.18846153846153846,
+                "precision": 0.011538461538461539
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.26605504587155965,
+                "precision": 0.015596330275229359
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.48314606741573035,
+                "precision": 0.047191011235955045
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 10,
+          "k": 5,
+          "metrics": {
+            "HitRate@5": 0.1235,
+            "Precision@5": 0.0303,
+            "Recall@5": 0.0258,
+            "Coverage": 0.0917,
+            "AvgLatencyMs": 2.48,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@5": [
+                0.097,
+                0.1517
+              ],
+              "Precision@5": [
+                0.0236,
+                0.0374
+              ],
+              "Recall@5": [
+                0.0177,
+                0.0338
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.09615384615384616,
+                "precision": 0.023846153846153847
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.10091743119266056,
+                "precision": 0.023853211009174313
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.25842696629213485,
+                "precision": 0.06516853932584271
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 10,
+          "k": 10,
+          "metrics": {
+            "HitRate@10": 0.1958,
+            "Precision@10": 0.0263,
+            "Recall@10": 0.0491,
+            "Coverage": 0.1305,
+            "AvgLatencyMs": 3.46,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@10": [
+                0.1623,
+                0.2311
+              ],
+              "Precision@10": [
+                0.0213,
+                0.0314
+              ],
+              "Recall@10": [
+                0.0371,
+                0.0613
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.1576923076923077,
+                "precision": 0.018846153846153846
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.1651376146788991,
+                "precision": 0.01972477064220184
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.38202247191011235,
+                "precision": 0.06404494382022471
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        },
+        {
+          "mean_centered": true,
+          "min_ratings": 10,
+          "k": 20,
+          "metrics": {
+            "HitRate@20": 0.3104,
+            "Precision@20": 0.0237,
+            "Recall@20": 0.0741,
+            "Coverage": 0.1667,
+            "AvgLatencyMs": 3.79,
+            "EvaluatedUsers": 567,
+            "ConfidenceIntervals95": {
+              "HitRate@20": [
+                0.2681,
+                0.3492
+              ],
+              "Precision@20": [
+                0.0198,
+                0.0277
+              ],
+              "Recall@20": [
+                0.0597,
+                0.0889
+              ]
+            },
+            "ByHistoryLength": {
+              "short": {
+                "users": 260,
+                "hit_rate": 0.2076923076923077,
+                "precision": 0.013076923076923078
+              },
+              "medium": {
+                "users": 218,
+                "hit_rate": 0.3211009174311927,
+                "precision": 0.020412844036697245
+              },
+              "long": {
+                "users": 89,
+                "hit_rate": 0.5842696629213483,
+                "precision": 0.06292134831460675
+              }
+            },
+            "Protocol": {
+              "unit": "user; aggregate cosine of up to five highest-rated training movies",
+              "positive_threshold": 3.5,
+              "seed": 42,
+              "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+              "eligible_users": 567,
+              "sample_limit": null
+            }
+          }
+        }
+      ]
+    },
+    "test": {
       "popularity": {
-        "HitRate@10": 0.27,
-        "Precision@10": 0.0485,
-        "Recall@10": 0.0287,
-        "Coverage": 0.0061,
-        "AvgLatencyMs": 0.28,
-        "EvaluatedUsers": 200
+        "HitRate@10": 0.3215,
+        "Precision@10": 0.0545,
+        "Recall@10": 0.0444,
+        "Coverage": 0.0113,
+        "AvgLatencyMs": 0.23,
+        "EvaluatedUsers": 594,
+        "ConfidenceIntervals95": {
+          "HitRate@10": [
+            0.2811,
+            0.3586
+          ],
+          "Precision@10": [
+            0.0473,
+            0.0633
+          ],
+          "Recall@10": [
+            0.0368,
+            0.0526
+          ]
+        },
+        "ByHistoryLength": {
+          "short": {
+            "users": 288,
+            "hit_rate": 0.23958333333333334,
+            "precision": 0.03194444444444444
+          },
+          "medium": {
+            "users": 217,
+            "hit_rate": 0.3317972350230415,
+            "precision": 0.0576036866359447
+          },
+          "long": {
+            "users": 89,
+            "hit_rate": 0.5617977528089888,
+            "precision": 0.1202247191011236
+          }
+        },
+        "Protocol": {
+          "unit": "user; aggregate cosine of up to five highest-rated training movies",
+          "positive_threshold": 3.5,
+          "seed": 42,
+          "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+          "eligible_users": 594,
+          "sample_limit": null
+        }
       },
       "cosine_raw": {
-        "HitRate@10": 0.37,
-        "Precision@10": 0.069,
-        "Recall@10": 0.0553,
-        "Coverage": 0.0725,
-        "AvgLatencyMs": 86.88,
-        "EvaluatedUsers": 200
+        "HitRate@10": 0.3906,
+        "Precision@10": 0.064,
+        "Recall@10": 0.0592,
+        "Coverage": 0.1052,
+        "AvgLatencyMs": 6.6,
+        "EvaluatedUsers": 594,
+        "ConfidenceIntervals95": {
+          "HitRate@10": [
+            0.3519,
+            0.431
+          ],
+          "Precision@10": [
+            0.0556,
+            0.0731
+          ],
+          "Recall@10": [
+            0.0492,
+            0.0703
+          ]
+        },
+        "ByHistoryLength": {
+          "short": {
+            "users": 288,
+            "hit_rate": 0.3125,
+            "precision": 0.04201388888888889
+          },
+          "medium": {
+            "users": 217,
+            "hit_rate": 0.41935483870967744,
+            "precision": 0.06820276497695853
+          },
+          "long": {
+            "users": 89,
+            "hit_rate": 0.5730337078651685,
+            "precision": 0.12471910112359552
+          }
+        },
+        "Protocol": {
+          "unit": "user; aggregate cosine of up to five highest-rated training movies",
+          "positive_threshold": 3.5,
+          "seed": 42,
+          "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+          "eligible_users": 594,
+          "sample_limit": null
+        }
+      },
+      "cosine_centered": {
+        "HitRate@10": 0.2896,
+        "Precision@10": 0.0407,
+        "Recall@10": 0.0321,
+        "Coverage": 0.1329,
+        "AvgLatencyMs": 3.52,
+        "EvaluatedUsers": 594,
+        "ConfidenceIntervals95": {
+          "HitRate@10": [
+            0.2542,
+            0.3266
+          ],
+          "Precision@10": [
+            0.035,
+            0.0468
+          ],
+          "Recall@10": [
+            0.0259,
+            0.0387
+          ]
+        },
+        "ByHistoryLength": {
+          "short": {
+            "users": 288,
+            "hit_rate": 0.17708333333333334,
+            "precision": 0.021180555555555553
+          },
+          "medium": {
+            "users": 217,
+            "hit_rate": 0.35023041474654376,
+            "precision": 0.05161290322580645
+          },
+          "long": {
+            "users": 89,
+            "hit_rate": 0.5056179775280899,
+            "precision": 0.07752808988764046
+          }
+        },
+        "Protocol": {
+          "unit": "user; aggregate cosine of up to five highest-rated training movies",
+          "positive_threshold": 3.5,
+          "seed": 42,
+          "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+          "eligible_users": 594,
+          "sample_limit": null
+        }
+      },
+      "selected": {
+        "HitRate@5": 0.2559,
+        "Precision@5": 0.0653,
+        "Recall@5": 0.0281,
+        "Coverage": 0.0726,
+        "AvgLatencyMs": 2.69,
+        "EvaluatedUsers": 594,
+        "ConfidenceIntervals95": {
+          "HitRate@5": [
+            0.2205,
+            0.2929
+          ],
+          "Precision@5": [
+            0.0552,
+            0.0764
+          ],
+          "Recall@5": [
+            0.0218,
+            0.0354
+          ]
+        },
+        "ByHistoryLength": {
+          "short": {
+            "users": 288,
+            "hit_rate": 0.18055555555555555,
+            "precision": 0.04027777777777778
+          },
+          "medium": {
+            "users": 217,
+            "hit_rate": 0.2764976958525346,
+            "precision": 0.06912442396313365
+          },
+          "long": {
+            "users": 89,
+            "hit_rate": 0.449438202247191,
+            "precision": 0.13707865168539324
+          }
+        },
+        "Protocol": {
+          "unit": "user; aggregate cosine of up to five highest-rated training movies",
+          "positive_threshold": 3.5,
+          "seed": 42,
+          "bootstrap": "1000 user resamples; descriptive uncertainty, not repeated test tuning",
+          "eligible_users": 594,
+          "sample_limit": null
+        }
       }
     },
-    "exp2_mean_centering_gain": {
-      "HitRate@10": 0.235,
-      "Precision@10": 0.034,
-      "Recall@10": 0.0293,
-      "Coverage": 0.1096,
-      "AvgLatencyMs": 56.34,
-      "EvaluatedUsers": 200
-    },
-    "leakage_prevention": "Per-user temporal split, zero test interactions included in feature matrix"
+    "selected_model": "cosine_raw",
+    "selection_rule": "Validation Precision@K, coverage, smaller K, raw, smaller min_ratings"
   },
   "limitations": [
-    "Cold-start: Không thể gợi ý chính xác cho phim mới chưa có đánh giá hoặc ít hơn 5 đánh giá.",
-    "Long-tail bias: Phim ít người xem thường có ít tương đồng chất lượng so với phim phổ biến.",
-    "Sở thích tĩnh: Chưa tính đến sự thay đổi gu xem phim theo thời gian thực."
+    "Cold-start: fewer than 10 train ratings cannot be served.",
+    "Long-tail and popularity bias; historical preferences may drift.",
+    "Only positive cosine scores are served; unknown release years are excluded when filtering by year.",
+    "Per-user temporal split does not enforce one global prediction date.",
+    "Bootstrap intervals describe user variability; no multiple-seed claims for deterministic splitting."
   ],
-  "ethical_considerations": "Không suy diễn thông tin nhân khẩu học hay sở thích riêng tư. Minh bạch điểm tương đồng và lý do gợi ý."
+  "ethical_considerations": "Historical recommendations are not absolute movie quality; do not infer sensitive traits.",
+  "reproducibility": {
+    "config": "models/config.json",
+    "data_manifest": "data/processed/data_manifest.json",
+    "results": "reports/experiment_results.json"
+  }
 }

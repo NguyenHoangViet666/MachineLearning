@@ -45,3 +45,5 @@ desktop.ini
 # Logs & temp
 *.log
 scratch/
+.pytest_cache/
+test-results/

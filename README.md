@@ -1,143 +1,95 @@
-# HỆ THỐNG GỢI Ý PHIM THEO SỞ THÍCH NGƯỜI DÙNG (MOVIELENS)
+# MovieLens — Project 01: Gợi ý phim bằng cosine
 
-> **Học máy cơ bản — Đề tài Project 01 (Bài 1: Vector và Độ tương đồng Cosine)**  
-> **Lớp:** 12523W.1 | **Giảng viên hướng dẫn:** PGS.TS. Nguyễn Văn Hậu  
-> **Hình thức:** Nhóm 02 sinh viên
+Học máy cơ bản, lớp 12523W.1 — PGS.TS. Nguyễn Văn Hậu.
+Nhóm: Nguyễn Hoàng Việt và Vũ Thành Minh. Nguồn: GroupLens MovieLens latest-small.
 
----
+Hệ thống biểu diễn mỗi phim bằng vector rating của người dùng, so sánh cosine thô và mean-centered, trả Top-K phim cùng điểm tương đồng/lý do. Title/genres chỉ dùng hiển thị và lọc. Không dự đoán rating hoặc suy diễn sở thích nhạy cảm.
 
-## 1. Giới thiệu tổng quan
+## Cài đặt trên máy mới
 
-Dự án xây dựng hệ thống gợi ý phim tương đồng (Item–Item Collaborative Retrieval) trên nền tảng dữ liệu thực tế **MovieLens latest-small** (100.836 ratings, 9.742 phim, 610 users).
+Đã kiểm chứng với Python 3.11.9 trên Windows. Chạy từ thư mục gốc repo:
 
-Mỗi bộ phim được mô hình hóa thành một vector trong không gian đánh giá của người dùng ($N$-chiều, $N=610$). Khi người dùng quan tâm đến một bộ phim, hệ thống sử dụng thuật toán **Cosine Similarity điều chỉnh (Adjusted Cosine)** để truy xuất Top-K bộ phim tương tự nhất và giải thích lý do tương đồng.
+```powershell
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.lock.txt
+.venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe scripts/verify_release.py
+.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
----
+Linux/macOS dùng `.venv/bin/python` thay `.venv/Scripts/python.exe`. Mở http://127.0.0.1:8000; OpenAPI và ví dụ schema tại `/docs`. Model, catalog small và kết quả đã lưu được bàn giao trong repo, nên serving không cần train lại. Thiếu model/catalog trả HTTP 503. Không nạp lại hoặc train trong request.
 
-## 2. Nguyên tắc khoa học & Chống rò rỉ dữ liệu (Anti-Leakage)
+`requirements.txt` mô tả dependency trực tiếp; `requirements.lock.txt` khóa phiên bản trực tiếp và phụ thuộc. Chỉ tái sinh lock sau khi kiểm thử bằng `python scripts/lock_environment.py`.
 
-Dự án tuân thủ nghiêm ngặt các tiêu chuẩn khoa học dữ liệu nhằm đảm bảo tính khách quan và khả năng tái lập:
-1. **Phân chia tập dữ liệu (Stratified Temporal / Per-user Split):**
-   - Tập dữ liệu được phân chia theo từng người dùng: **Train (70%)**, **Validation (10%)**, và **Test (20%)**.
-   - Các đánh giá mới nhất theo thời gian của từng người dùng được giữ lại độc lập trong tập Test.
-2. **Không rò rỉ dữ liệu (Zero Leakage):**
-   - Ma trận tương tác Item–User và toàn bộ vector đặc trưng của các bộ phim **CHỈ ĐƯỢC XÂY DỰNG TỪ TẬP TRAIN**.
-   - Tập Test hoàn toàn độc lập, được đóng băng và chỉ dùng một lần duy nhất để đo lường các metric cuối cùng (`HitRate@K`, `Precision@K`, `Recall@K`, `Coverage`).
-3. **Tách biệt Offline Training & Online Serving:**
-   - Ứng dụng Web / API chỉ nạp các artifact và metadata đã được tiền tính toán sẵn (`.pkl`, `.json`), tuyệt đối không huấn luyện lại mô hình trong thời gian phục vụ request.
+Kiểm thử trình duyệt tùy chọn: `python -m pip install -r requirements-browser.txt`, rồi `python scripts/browser_smoke.py --screenshots`. Script dùng Chrome/Edge sẵn có; máy chưa có trình duyệt cần `python -m playwright install chromium`. Script tự mở server tạm, kiểm tra UI desktop/mobile và tắt server; ảnh mới được lưu vào `reports/figures/`.
 
----
+## Pipeline và cách tái tạo
 
-## 3. Cấu trúc thư mục mã nguồn
+```powershell
+python -m src.data
+python -m src.train --development
+python -m src.evaluate --split validation
+python -m src.evaluate --split test
+```
+
+- `src.data`: tải HTTPS nếu thiếu dữ liệu; kiểm tra schema/khóa/rating; lưu dòng loại kèm lý do, checksum và split.
+- `src.train --development`: EDA trên train; baseline đếm lượt rating; khảo sát cosine raw/mean-centered, K = 5/10/20 và min_ratings = 1/5/10 trên validation. Không tính metric test, không thay model serving.
+- `src.evaluate --split validation`: nạp model đã lưu và đánh giá riêng, không train; lưu `reports/evaluation.json`.
+- `src.evaluate --split test`: đọc kết quả test đã đóng băng, không đánh giá test lại.
+
+`python -m src.train` dùng cho **một bản phát hành chưa có** `reports/experiment_results.json`. Lệnh từ chối nếu test đã bắt đầu/hoàn thành để tránh vô tình đánh giá lại. Để tái tạo toàn bộ từ đầu, dùng bản sao riêng của repo, giữ hồ sơ bản phát hành hiện tại và bỏ tệp kết quả đóng băng trong bản sao. Việc tái tạo kỹ thuật không được dùng làm vòng tuning mới trên cùng test. Không tuyên bố các kết quả test lịch sử của phiên bản cũ chưa từng được xem.
+
+Split cố định 70/10/20 theo từng user, sắp timestamp rồi movieId; tỷ lệ làm tròn theo số rating. Timestamp bằng nhau có thể nằm hai bên ranh giới. Không phải cutoff thời gian chung cho mọi user. Seed 42 dùng cho bootstrap; không tạo split ngẫu nhiên mới. Vector, lọc tần suất và trung bình user chỉ học từ train; user mean tính trước khi lọc phim.
+
+Chọn bằng **Precision@K validation**, sau đó coverage, K nhỏ hơn, raw và ngưỡng nhỏ hơn khi hòa. Cấu hình/model được lưu trước test. So sánh test tại K=10 dùng ngưỡng được validation chọn riêng cho từng biểu diễn; so sánh có kiểm soát cùng min_ratings=5/K=10 nằm trong biểu đồ validation. Test cuối chạy một đợt cho các cấu hình đã chốt, trên toàn bộ user có rating giữ lại >=3.5.
+
+Đơn vị đánh giá là user: cộng cosine từ tối đa 5 phim user chấm cao nhất trong train, loại phim đã xem rồi lấy Top-K. Web phục vụ một phim đầu vào; latency offline là truy vấn tổng hợp theo user, không phải độ trễ HTTP của một phim. Coverage dùng mẫu số là toàn bộ phim có rating train. Khoảng tin cậy 95% dùng 1.000 bootstrap user; không tuyên bố nhiều seed/fold cho split thời gian cố định.
+
+## Kết quả hiện tại
+
+Nguồn có thể kiểm tra: `reports/experiment_results.json`, `reports/validation_grid.csv`, `models/config.json`, `models/model_card.json`.
+
+Validation chọn **cosine raw, min_ratings=10, K=5**. Test có 594 user đủ điều kiện:
+
+| Mô hình đối chứng tại K=10 | HitRate@10 | Precision@10 | Coverage |
+| --- | ---: | ---: | ---: |
+| Popularity theo số rating | 0.3215 | 0.0545 | 0.0113 |
+| Cosine raw | 0.3906 | 0.0640 | 0.1052 |
+| Cosine mean-centered | 0.2896 | 0.0407 | 0.1329 |
+
+Cấu hình serving đã chọn tại K=5 có Precision@5=0.0653, HitRate@5=0.2559 và Coverage=0.0726. Không so trực tiếp điểm ở K=5 với baseline K=10. Mean-centering tăng coverage nhưng giảm precision ở thí nghiệm này; không khẳng định luôn tốt hơn raw hoặc có quan hệ nhân quả. Có metric theo độ dài lịch sử và khoảng tin cậy trong JSON.
+
+Thí nghiệm 4 quét movieId tăng dần để tìm ca thực sự có vấn đề: không đủ dữ liệu, không đủ kết quả, cosine thấp hoặc ít nhất 80% kết quả cùng thể loại. Lưu ít nhất 10 ca gồm Top-5 thật, lý do và hướng xử lý; ưu tiên giữ cả ca thiếu đa dạng lẫn cold-start. Tiêu chí đa dạng là dấu hiệu cần kiểm tra thủ công, không đồng nghĩa phim gợi ý sai.
+
+## API và đầu vào
+
+`GET /api/movies`, `/api/movies/{movie_id}`, `/api/genres`, `/api/recommendations`, `/api/model-card`, `/api/failure-cases`; `POST /api/chat`.
+
+Ví dụ request:
 
 ```text
-Học máy/
-├── data/
-│   ├── raw/                       # Dữ liệu gốc MovieLens (ml-latest-small)
-│   ├── processed/                 # Dữ liệu đã split (train_ratings.csv, val, test, movies_clean)
-│   └── README.md                  # Data dictionary, bản quyền GroupLens & nguyên tắc split
-├── src/
-│   ├── data.py                    # Script tự động tải, kiểm tra chất lượng & chia tập
-│   ├── features.py                # Xây dựng ma trận thưa CSR, khử thiên vị mean-centering
-│   ├── models.py                  # PopularityRecommender (Baseline) & CosineItemItemRecommender
-│   ├── chatbot_engine.py          # Trợ lý ảo CineBot In-House NLP (TF-IDF & Cosine Similarity)
-│   ├── train.py                   # Huấn luyện mô hình, chạy 4 thí nghiệm, vẽ biểu đồ
-│   └── evaluate.py                # Đo lường HitRate@K, Precision@K, Coverage, Latency
-├── models/
-│   ├── cosine_recommender.pkl     # Trọng số mô hình đã lưu
-│   └── model_card.json            # Đặc tả kỹ thuật Model Card chuẩn mực
-├── reports/
-│   └── figures/                   # Biểu đồ EDA & 4 biểu đồ thí nghiệm khoa học
-│       ├── eda_rating_distribution.png
-│       ├── eda_long_tail_movies.png
-│       ├── exp1_baseline_vs_cosine.png
-│       ├── exp2_raw_vs_mean_centered.png
-│       ├── exp3_k_and_min_ratings.png
-│       └── exp4_failure_analysis.json
-├── app/                           # Ứng dụng Web Serving & REST API
-│   ├── main.py                    # FastAPI server & endpoints
-│   ├── templates/index.html       # Giao diện 3 màn hình (Gợi ý, Dashboard, Model Card)
-│   └── static/
-│       ├── css/style.css          # Giao diện hiện đại (Dark Glassmorphism)
-│       └── js/app.js              # Tương tác tìm kiếm live-search & rendering
-├── requirements.txt               # Danh sách thư viện phụ thuộc
-├── Project_01_goi_y_phim_movielens.md # Đề bài giao nhiệm vụ kết thúc học phần
-└── README.md                      # Hướng dẫn cài đặt và sử dụng
+GET /api/recommendations?movie_id=1&k=5&genres=Animation,Children&match_mode=all&year_min=1990&year_max=2010
 ```
 
----
+Response thành công gồm `movie_id`, `query_movie_title`, `rating_count`, `status`, `warning`, `k`, thông tin bộ lọc và `recommendations`. Mỗi phim gồm `movieId`, `title`, `genres`, `similarity_score`, `rating_count`, `rating_mean`, `reason`. Để xem response thật trên model bàn giao:
 
-## 4. Hướng dẫn cài đặt & Chạy từ máy mới
-
-### Bước 1: Cài đặt thư viện phụ thuộc
-```bash
-pip install -r requirements.txt
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/api/recommendations?movie_id=1&k=5' | ConvertTo-Json -Depth 6
 ```
 
-### Bước 2: Tải dữ liệu, chia tập và huấn luyện mô hình (Chạy 4 thí nghiệm)
-Chỉ cần chạy một lệnh duy nhất:
-```bash
-python -m src.train
-```
-Lệnh trên sẽ tự động:
-1. Tải tập dữ liệu MovieLens từ GroupLens và giải nén.
-2. Kiểm tra chất lượng dữ liệu (missing, duplicates, schema).
-3. Chia tập Train/Val/Test chống rò rỉ dữ liệu.
-4. Xuất biểu đồ EDA và thực thi **4 Thí nghiệm bắt buộc**.
-5. Lưu model `models/cosine_recommender.pkl` và `models/model_card.json`.
+`reports/api_examples.json` lưu request/response thật cho gợi ý thành công, cold-start, K ngoài miền và ID không tồn tại; được sinh bởi `scripts/verify_release.py`.
 
-### Bước 3: Khởi chạy ứng dụng Web & API
-```bash
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-Truy cập trình duyệt tại: **<http://127.0.0.1:8000>**
+K: 1–50; movie_id: số nguyên dương; năm: 1870–2100 và từ <= đến. `match_mode`: `any`, `all`, `exclude`; thể loại phải có trong catalog, không âm thầm đổi giá trị sai. Tìm tên phim là chuỗi literal, không phải regex. Năm không rõ bị loại khi lọc năm. API trả 422 cho input sai, 404 cho phim không tồn tại, 503 khi thiếu artifact. Phim có thật nhưng dưới ngưỡng rating trả 200, `status="warning"`, thông báo rõ và danh sách rỗng. Cosine có miền lý thuyết [-1,1]; serving chỉ trả điểm dương [0,1]; rating [0.5,5.0].
 
----
+Dashboard và phạm vi/model card đọc model card đã lưu, không ghi cố định KPI. UI có tìm kiếm, chọn phim, Top-K, lọc nhiều thể loại/năm và cảnh báo. Tên phim nhập tự do không bị tự động thay bằng kết quả đầu tiên.
 
-## 5. Kết quả 4 Thí nghiệm Bắt buộc
+## Hồ sơ bàn giao kỹ thuật
 
-### Thí nghiệm 1: So sánh Baseline Phổ Biến (Popularity) vs Cosine Item-Item
-| Metric (K=10) | Baseline (Popularity) | Cosine (Raw Vector) | Cải thiện |
-| :--- | :---: | :---: | :---: |
-| **HitRate@10** | 0.2700 | **0.3700** | **+37.0%** |
-| **Precision@10** | 0.0485 | **0.0690** | **+42.3%** |
-| **Recall@10** | 0.0287 | **0.0553** | **+92.7%** |
-| **Catalog Coverage** | 0.0061 (0.6%) | **0.0725 (7.25%)** | **Gấp 11.9 lần** |
-| **Query Latency** | 0.28 ms | 86.88 ms | Đáp ứng thời gian thực (< 100ms) |
+- `data/README.md`, `data/processed/data_manifest.json`: nguồn/điều khoản/dictionary/checksum. Ngày tải gốc của dữ liệu có sẵn chưa biết được ghi rõ.
+- `data/processed/quality_report.json`, `excluded_ratings.csv`: kiểm tra chất lượng và dòng bị loại.
+- `models/cosine_recommender.pkl`, `config.json`, `model_card.json`: artifact, lựa chọn, môi trường và SHA-256.
+- `reports/experiment_results.json`, `validation_grid.csv`, `reports/figures/`: kết quả validation/test và hình có nguồn từ pipeline.
+- `tests/`: split, preprocessing, baseline, metric, phân tích lỗi, API đầu vào/lỗi, lọc năm/thể loại và chatbot.
+- `reports/nhat_ky_6_tuan_phan_cong.md`: nhật ký nhóm; báo cáo PDF/nguồn và slide là sản phẩm bàn giao riêng, không được các script tự xác nhận đã hoàn thành.
 
-*Nhận xét:* Baseline tuy cho thời gian truy vấn cực nhanh nhưng độ phủ danh mục cực kỳ nghèo nàn (chỉ 0.6% kho phim được gợi ý), hoàn toàn không thể hiện được tính cá nhân hóa theo từng sở thích. Mô hình Cosine vượt trội rõ rệt trên tất cả các tiêu chí đánh giá.
-
-### Thí nghiệm 2: Khử thiên vị người dùng (Mean-Centering / Adjusted Cosine)
-* Trừ điểm trung bình của từng user ($r'_{ui} = r_{ui} - \mu_u$) giúp mở rộng độ phủ kho phim lên **10.96%** (so với 7.25% của Raw Cosine), loại bỏ hiệu ứng các bộ phim chỉ được điểm cao vì người xem quá dễ tính.
-
-### Thí nghiệm 3: Khảo sát siêu tham số K và ngưỡng lọc `min_ratings`
-* Khảo sát với $K \in \{5, 10, 20\}$ và $min\_ratings \in \{1, 5, 10\}$ trên tập Validation:
-  * Khi tăng $K$ từ 5 lên 20, `HitRate` tăng từ 0.17 lên 0.38, độ phủ tăng từ 3.8% lên 9.6%.
-  * Chọn ngưỡng $min\_ratings = 5$ giúp cân bằng giữa độ chính xác và khả năng phục vụ được nhiều phim trong danh mục.
-
-### Thí nghiệm 4: Phân tích 10 ca truy vấn ngoại biên & thất bại
-Chi tiết được lưu tại `reports/figures/exp4_failure_analysis.json` và hiển thị trực tiếp trên tab **Dashboard** của ứng dụng Web:
-* **Các ca tương đồng xuất sắc:** *The Godfather (1972)* $\to$ *The Godfather: Part II (1974)* (Điểm cosine 0.6731); *Toy Story (1995)* $\to$ *Toy Story 2 (1999)* (Điểm cosine 0.3301).
-* **Các ca Cold-start & Dữ liệu thưa:** *Black Butler (2017)*, *Camera Buff (1979)* chỉ có 1 tương tác trong tập train $\to$ Hệ thống kích hoạt cảnh báo `Warning` và từ chối gợi ý ảo để bảo vệ độ tin cậy.
-
----
-
-## 6. Đặc tả REST API
-
-| Phương thức | Endpoint | Mô tả |
-| :--- | :--- | :--- |
-| `GET` | `/api/movies?query={name}&limit={n}` | Tìm kiếm phim theo tên phục vụ Autocomplete |
-| `GET` | `/api/movies/{id}` | Lấy chi tiết thông tin phim và số lượt rating |
-| `GET` | `/api/recommendations?movie_id={id}&k={k}&genre={genre}` | Gợi ý Top-K phim tương đồng theo Cosine |
-| `GET` | `/api/model-card` | Xuất thông tin Model Card dưới dạng JSON |
-| `GET` | `/api/failure-cases` | Danh sách dữ liệu phân tích 10 ca ngoại biên (TN4) |
-
----
-
-## 7. Phân công đóng góp (Nhóm 02 sinh viên)
-
-| Thành viên | Trách nhiệm chính |
-| :--- | :--- |
-| **Thành viên 1** | Xây dựng pipeline dữ liệu (`src/data.py`, `src/features.py`), kiểm tra Data Leakage, thiết kế thí nghiệm 1 & 2. |
-| **Thành viên 2** | Triển khai mô hình Cosine (`src/models.py`, `src/evaluate.py`), khảo sát tham số thí nghiệm 3 & 4, xây dựng Web App & API (`app/`). |
-| **Cả nhóm** | Cùng thảo luận lựa chọn metric, phân tích 10 ca lỗi, viết báo cáo tổng kết và chuẩn bị slide thuyết trình. |
+Nguồn dữ liệu: [GroupLens](https://grouplens.org/datasets/movielens/latest/), Harper & Konstan (2015), *The MovieLens Datasets: History and Context*, DOI: 10.1145/2827872. Giữ điều khoản trong `data/raw/ml-latest-small/README.txt`.

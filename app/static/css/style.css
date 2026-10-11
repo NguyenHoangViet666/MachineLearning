@@ -2074,3 +2074,6 @@ body {
   font-style: italic;
 }
 
+/* Release-year range follows the same filters in search and recommendations. */
+.year-filter { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.year-filter input { width: 6rem; padding: .55rem; border: 1px solid #64748b; border-radius: .5rem; background: #0f172a; color: #fff; }
