@@ -15,6 +15,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchSpinner = document.getElementById("search-spinner");
   const genreFilter = document.getElementById("filter-genre");
   const kSelect = document.getElementById("select-k");
+  const kError = document.getElementById("k-error");
+  function readK() {
+    const k = kSelect.valueAsNumber;
+    const valid = kSelect.checkValidity() && Number.isInteger(k) && k >= 1 && k <= 50;
+    kSelect.setAttribute("aria-invalid", String(!valid));
+    kError.textContent = valid ? "" : "K phải là số nguyên từ 1 đến 50 phim; không được để trống.";
+    kError.classList.toggle("hidden", valid);
+    return valid ? k : null;
+  }
   const yearMin = document.getElementById("year-min");
   const yearMax = document.getElementById("year-max");
 
@@ -74,6 +83,63 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let selectedMovieId = null;
   let searchDebounceTimeout = null;
+  const detailDialog = document.getElementById("movie-detail-dialog");
+  const detailTitle = document.getElementById("movie-detail-title");
+  const detailStatus = document.getElementById("movie-detail-status");
+  const detailFields = document.getElementById("movie-detail-fields");
+  const detailWarning = document.getElementById("movie-detail-warning");
+  const detailRecommend = document.getElementById("movie-detail-recommend");
+  let detailMovie = null;
+  let detailRequest = 0;
+
+  async function openMovieDetails(movieId) {
+    const requestId = ++detailRequest;
+    detailMovie = null;
+    detailTitle.textContent = "Chi tiết phim";
+    detailStatus.textContent = "Đang tải thông tin phim...";
+    detailFields.classList.add("hidden");
+    detailWarning.classList.add("hidden");
+    detailRecommend.disabled = true;
+    if (!detailDialog.open) detailDialog.showModal();
+    try {
+      const response = await apiFetch(`${API_BASE}/api/movies/${movieId}`);
+      const movie = await response.json();
+      if (requestId !== detailRequest || !detailDialog.open) return;
+      detailMovie = movie;
+      detailTitle.textContent = movie.title;
+      detailStatus.textContent = "Thông tin phim và thống kê đánh giá từ tập train.";
+      document.getElementById("movie-detail-id").textContent = movie.movieId;
+      document.getElementById("movie-detail-year").textContent = movie.year ?? "Chưa rõ năm";
+      document.getElementById("movie-detail-genres").textContent = movie.genres.replaceAll("|", ", ");
+      document.getElementById("movie-detail-count").textContent = `${movie.rating_count.toLocaleString()} lượt`;
+      document.getElementById("movie-detail-rating").textContent = movie.rating_count ? `${movie.rating_mean.toFixed(2)} / 5.0 sao` : "Chưa có đánh giá train";
+      detailFields.classList.remove("hidden");
+      detailWarning.textContent = movie.warning || "";
+      detailWarning.classList.toggle("hidden", !movie.warning);
+      detailRecommend.disabled = !movie.can_recommend;
+    } catch (error) {
+      if (requestId === detailRequest && detailDialog.open) detailStatus.textContent = error.message;
+    }
+  }
+  document.getElementById("movie-detail-close").addEventListener("click", () => detailDialog.close());
+  detailDialog.addEventListener("close", () => { ++detailRequest; detailMovie = null; });
+  detailDialog.addEventListener("click", (event) => {
+    const bounds = detailDialog.getBoundingClientRect();
+    if (event.target === detailDialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) detailDialog.close();
+  });
+  detailRecommend.addEventListener("click", () => {
+    if (!detailMovie) return;
+    const movie = detailMovie;
+    detailDialog.close();
+    selectedMovieId = movie.movieId;
+    searchInput.value = movie.title;
+    executeRecommendation(movie.movieId);
+  });
+  seedTitle.addEventListener("click", () => { if (selectedMovieId) openMovieDetails(selectedMovieId); });
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-movie-detail]");
+    if (button) openMovieDetails(Number(button.dataset.movieDetail));
+  });
 
   async function loadEvaluation() {
     const body = document.getElementById("comparison-table-body");
@@ -183,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
           searchInput.value = title;
           autocompleteList.classList.add("hidden");
           executeRecommendation(selectedMovieId);
+          openMovieDetails(id);
         }
       });
     });
@@ -421,6 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ==================== TÌM KIẾM & LÀM MỚI ====================
   async function handleSearchAction() {
+    if (readK() === null) return;
     if (selectedMovieId) {
       await executeRecommendation(selectedMovieId);
       return;
@@ -496,6 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   if (kSelect) {
+    kSelect.addEventListener("input", readK);
     kSelect.addEventListener("change", () => {
       if (selectedMovieId) executeRecommendation(selectedMovieId);
     });
@@ -503,7 +572,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ==================== THỰC THI GỢI Ý (COSINE + FILTER) ====================
   async function executeRecommendation(movieId) {
-    const k = parseInt(kSelect?.value) || 10;
+    const k = readK();
+    if (k === null) return;
     
     // Hiển thị trạng thái đang tải
     recsGrid.innerHTML = `
@@ -605,7 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="rec-score-lbl">Cosine Sim</span>
               </div>
             </div>
-            <h4 class="rec-title">${escapeHtml(item.title)}</h4>
+            <h4 class="rec-title"><button type="button" class="movie-detail-link" data-movie-detail="${item.movieId}" title="Xem chi tiết phim">${escapeHtml(item.title)}</button></h4>
             <div class="rec-genres">${genresHtml}</div>
             
             <div class="sim-bar-container" title="Độ tương đồng: ${simPercent}%">
@@ -777,7 +847,7 @@ document.addEventListener("DOMContentLoaded", () => {
       recsHtml = `<div class="chat-movie-cards">` + recommendations.map(rec => `
         <div class="chat-movie-item">
           <div class="chat-movie-top">
-            <span class="chat-movie-title">${escapeHtml(rec.title)}</span>
+            <button type="button" class="chat-movie-title movie-detail-link" data-movie-detail="${rec.movieId}">${escapeHtml(rec.title)}</button>
             <span class="chat-similarity-badge">${typeof rec.similarity_score === 'number' ? (rec.similarity_score * 100).toFixed(1) + '%' : rec.similarity_score}</span>
           </div>
           <div class="chat-movie-genres">${escapeHtml(rec.genres)}</div>

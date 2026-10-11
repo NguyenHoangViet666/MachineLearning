@@ -83,6 +83,10 @@ K: 1–50; movie_id: số nguyên dương; năm: 1870–2100 và từ <= đến.
 
 Dashboard và phạm vi/model card đọc model card đã lưu, không ghi cố định KPI. UI có tìm kiếm, chọn phim, Top-K, lọc nhiều thể loại/năm và cảnh báo. Tên phim nhập tự do không bị tự động thay bằng kết quả đầu tiên.
 
+Bấm tên phim ở card gợi ý, phim gốc hoặc chatbot để mở modal chi tiết; chọn kết quả tìm kiếm cũng mở modal. Modal hiển thị năm, thể loại, số rating train, rating trung bình với đơn vị, cảnh báo và nút gợi ý từ phim đó. Đóng bằng nút Đóng, Escape hoặc bấm nền; giữ focus bàn phím trong modal. Phim cold-start vẫn xem được chi tiết, nhưng nút gợi ý bị vô hiệu hóa và có lý do rõ ràng. API chi tiết trả thêm `year`, `can_recommend`, `warning`.
+
+K là ô số nguyên bắt buộc 1–50 phim, có nhãn miền giá trị và lỗi ngay bên cạnh. Bỏ trống, số lẻ hoặc ngoài miền bị chặn trước khi gửi request; không tự đổi sang giá trị mặc định.
+
 ## Hồ sơ bàn giao kỹ thuật
 
 - `data/README.md`, `data/processed/data_manifest.json`: nguồn/điều khoản/dictionary/checksum. Ngày tải gốc của dữ liệu có sẵn chưa biết được ghi rõ.

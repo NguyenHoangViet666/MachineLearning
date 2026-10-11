@@ -283,6 +283,9 @@ async def get_movie_detail(movie_id: int = Path(..., ge=1)):
         raise HTTPException(status_code=404, detail=f"Không tìm thấy phim với ID {movie_id}")
     
     movie_info = match.iloc[0].to_dict()
+    import re
+    year = re.search(r"\((\d{4})\)\s*$", movie_info["title"])
+    movie_info["year"] = int(year.group(1)) if year else None
     # Thêm thống kê số rating nếu có
     if MODEL and movie_id in MODEL.movie_stats:
         stats = MODEL.movie_stats[movie_id]
@@ -292,6 +295,14 @@ async def get_movie_detail(movie_id: int = Path(..., ge=1)):
         movie_info["rating_count"] = 0
         movie_info["rating_mean"] = 0.0
         
+    movie_info["can_recommend"] = bool(MODEL and movie_id in MODEL.builder.movie2idx)
+    movie_info["warning"] = None
+    if MODEL is None:
+        movie_info["warning"] = "Mô hình gợi ý chưa sẵn sàng."
+    elif not movie_info["can_recommend"]:
+        movie_info["warning"] = f"Chỉ có {movie_info['rating_count']} lượt đánh giá train, dưới ngưỡng {MODEL.min_movie_ratings}; không đủ dữ liệu để gợi ý."
+    elif movie_info["rating_count"] < 10:
+        movie_info["warning"] = "Phim có ít đánh giá train; độ tin cậy của gợi ý có thể bị ảnh hưởng."
     return movie_info
 
 
