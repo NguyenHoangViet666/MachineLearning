@@ -459,7 +459,7 @@ body {
 }
 
 .k-select-wrap {
-  margin-left: auto;
+  margin-left: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2084,8 +2084,28 @@ body {
 #select-k[aria-invalid="true"] { border-color: #f87171; }
 .movie-detail-link { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
 .movie-detail-link:focus-visible { outline: 2px solid #38bdf8; outline-offset: 4px; }
-#movie-detail-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto; padding: 1.5rem; border: 1px solid #64748b; border-radius: 1rem; background: #0f172a; color: #e2e8f0; }
-#movie-detail-dialog::backdrop { background: rgb(0 0 0 / 70%); }
+#movie-detail-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+#movie-detail-dialog:not([open]) {
+  display: none;
+}
+#movie-detail-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+}
 .movie-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .movie-detail-header h2 { margin: 0; overflow-wrap: anywhere; }
 .movie-detail-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .8rem; }
